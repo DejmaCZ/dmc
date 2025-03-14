@@ -1,0 +1,102 @@
+{# templates/browser/file_details.js.twig #}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Přidání události kliknutí na tlačítka detailů souborů
+        const fileDetailsButtons = document.querySelectorAll('.file-details');
+        
+        fileDetailsButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const fileId = this.getAttribute('data-file-id');
+                const mediaId = this.getAttribute('data-media-id') || 
+                                document.querySelector('meta[name="media-id"]')?.getAttribute('content');
+                
+                if (!fileId || !mediaId) {
+                    console.error('Chybí ID souboru nebo média');
+                    return;
+                }
+                
+                // Zvýraznění vybraného řádku
+                document.querySelectorAll('.file-row').forEach(row => {
+                    row.classList.remove('table-primary');
+                });
+                this.closest('tr').classList.add('table-primary');
+                
+                // Zobrazení načítacího indikátoru
+                const detailsContainer = document.getElementById('file-details-container');
+                detailsContainer.innerHTML = `
+                    <div class="text-center p-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Načítání...</span>
+                        </div>
+                        <p class="mt-2">Načítám detaily souboru...</p>
+                    </div>
+                `;
+                
+                // Načtení detailů souboru
+                fetch(`/api/file/${mediaId}/${fileId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Nepodařilo se načíst detaily souboru');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Zobrazení detailů souboru
+                        detailsContainer.innerHTML = `
+                            <div class="file-details-content">
+                                <h6 class="mb-3 border-bottom pb-2">${data.original_filename}</h6>
+                                
+                                <table class="table table-sm">
+                                    <tbody>
+                                        <tr>
+                                            <th>Cesta:</th>
+                                            <td>${data.full_path}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Velikost:</th>
+                                            <td>${data.formatted_size}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Poslední změna:</th>
+                                            <td>${formatDate(data.file_modified_at)}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Přípona:</th>
+                                            <td>${data.extension || 'Bez přípony'}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Hash obsahu:</th>
+                                            <td><span class="text-monospace small">${data.content_hash}</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    })
+                    .catch(error => {
+                        console.error('Chyba při načítání detailů:', error);
+                        detailsContainer.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                Nepodařilo se načíst detaily souboru.
+                            </div>
+                        `;
+                    });
+            });
+        });
+        
+        // Pomocná funkce pro formátování data
+        function formatDate(dateString) {
+            if (!dateString) return 'Neznámé';
+            
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('cs-CZ') + ' ' + date.toLocaleTimeString('cs-CZ');
+            } catch (e) {
+                return dateString;
+            }
+        }
+    });
+</script>

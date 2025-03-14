@@ -1,0 +1,196 @@
+{# templates/media/list.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Správa médií | Digital Media Collector{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Seznam médií</h2>
+    <a href="{{ path('app_media_new') }}" class="btn btn-primary">
+        <i class="bi bi-plus"></i> Přidat médium
+    </a>
+</div>
+
+<div class="container-fluid p-0">
+
+
+    <div class="container py-4">
+
+
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Identifikátor</th>
+                                <th>Popis</th>
+                                <th>Typ</th>
+                                <th>Vytvořeno</th>
+                                <th>Poslední sken</th>
+                                <th>Počet souborů</th>
+                                <th>Velikost celkem</th>
+                                <th>Cesta</th>
+                                <th>Akce</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if mediaList is defined and mediaList|length > 0 %}
+                                {% for media in mediaList %}
+                                    <tr>
+                                        <td>{{ media.id }}</td>
+                                        <td>{{ media.identifier }}</td>
+                                        <td>{{ media.description }}</td>
+                                        <td>{{ media.mediaType.name }}</td>
+                                        <td>{{ media.createdAt|date('d.m.Y') }}</td>
+                                        <td>{{ media.lastScannedAt ? media.lastScannedAt|date('d.m.Y H:i') : 'Nikdy' }}</td>
+                                        <td>{{ media.filesCount ?? 'N/A' }}</td>
+                                        <td>{{ media.totalSize ?? 'N/A' }}</td>
+                                        <td><code>"{{ media.path }}"</code></td>
+                                        {# V templates/media/list.html.twig upravte část s akcemi #}
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ path('app_browser_media', {'mediaId': media.id}) }}" class="btn btn-outline-primary" title="Procházet">
+                                                    <i class="bi bi-folder2-open"></i>
+                                                </a>
+                                                <a href="{{ path('app_media_edit', {'id': media.id}) }}" class="btn btn-outline-secondary" title="Upravit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-outline-secondary generate-scan-cmd" data-media-id="{{ media.id }}" title="Skenovat">
+                                                    <i class="bi bi-search"></i>
+                                                </button>
+                                                <a href="{{ path('app_media_delete', {'id': media.id}) }}" 
+                                                class="btn btn-outline-danger" 
+                                                title="Smazat"
+                                                onclick="return confirm('Opravdu chcete smazat toto médium? Tato akce nelze vrátit.')">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center">Žádná média k zobrazení</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pro přidání média -->
+<div class="modal fade" id="addMediaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Přidat nové médium</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addMediaForm" method="post" action="{{ path('app_media_create') }}">
+                    <div class="mb-3">
+                        <label for="mediaDescription" class="form-label">Popis média</label>
+                        <input type="text" class="form-control" id="mediaDescription" name="description" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="mediaType" class="form-label">Typ média</label>
+                        <select class="form-select" id="mediaType" name="type" required>
+                            {% if mediaTypes is defined %}
+                                {% for type in mediaTypes %}
+                                    <option value="{{ type.name }}">{{ type.description }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="HDD">Hard Disk Drive</option>
+                                <option value="SSD">Solid State Drive</option>
+                                <option value="USB">USB Flash Drive</option>
+                                <option value="DVD">DVD Disk</option>
+                                <option value="CD">CD Disk</option>
+                                <option value="BLURAY">Blu-ray Disk</option>
+                                <option value="FOLDER">Local Folder</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="mediaPath" class="form-label">Cesta</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="mediaPath" name="path" required>
+                            <button class="btn btn-outline-secondary" type="button" id="browseButton">Procházet...</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
+                <button type="button" class="btn btn-primary" id="saveMediaButton">Uložit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pro generování CLI příkazu -->
+<div class="modal fade" id="scanCommandModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Příkaz pro skenování</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Pro spuštění skenování média zkopírujte a vložte tento příkaz do příkazové řádky:</p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="scanCommand" readonly>
+                    <button class="btn btn-outline-secondary" type="button" id="copyScanCommand">Kopírovat</button>
+                </div>
+                <div class="mt-3">
+                    <h6>Postup:</h6>
+                    <ol>
+                        <li>Zkopírujte příkaz kliknutím na tlačítko "Kopírovat"</li>
+                        <li>Stiskněte klávesu <kbd>Win</kbd>+<kbd>R</kbd> pro otevření dialogu "Spustit"</li>
+                        <li>Vložte příkaz a stiskněte <kbd>Enter</kbd></li>
+                    </ol>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zavřít</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tlačítko pro generování skenovacího příkazu
+        document.querySelectorAll('.generate-scan-cmd').forEach(button => {
+            button.addEventListener('click', function() {
+                const mediaId = this.getAttribute('data-media-id');
+                const command = `php bin/console media:scan --media-id=${mediaId}`;
+                document.getElementById('scanCommand').value = command;
+                new bootstrap.Modal(document.getElementById('scanCommandModal')).show();
+            });
+        });
+
+        // Kopírování příkazu do schránky
+        document.getElementById('copyScanCommand').addEventListener('click', function() {
+            const commandInput = document.getElementById('scanCommand');
+            commandInput.select();
+            document.execCommand('copy');
+            this.textContent = 'Zkopírováno!';
+            setTimeout(() => {
+                this.textContent = 'Kopírovat';
+            }, 2000);
+        });
+
+        // Uložení nového média
+        document.getElementById('saveMediaButton').addEventListener('click', function() {
+            document.getElementById('addMediaForm').submit();
+        });
+    });
+</script>
+{% endblock %}

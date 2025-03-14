@@ -1,0 +1,142 @@
+{# templates/settings/media_type_form.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ mode == 'new' ? 'Nový typ média' : 'Úprava typu média' }}{% endblock %}
+
+{% block content %}
+<div class="card h-100">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{{ mode == 'new' ? 'Nový typ média' : 'Úprava typu média' }}</h5>
+        <a href="{{ path('app_settings_media_types') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Zpět na seznam
+        </a>
+    </div>
+    <div class="card-body">
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+        
+        <form method="post">
+            <div class="mb-3">
+                <label for="name" class="form-label">Název typu média *</label>
+                <input type="text" class="form-control" id="name" name="name" required 
+                       value="{{ type ? type.name : '' }}">
+                <div class="form-text">
+                    Zadejte krátký výstižný název pro typ média, např. "HDD", "DVD", "USB".
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Popis typu média</label>
+                <textarea class="form-control" id="description" name="description" rows="2">{{ type ? type.description : '' }}</textarea>
+                <div class="form-text">Nepovinný popis typu média.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="icon" class="form-label">Ikona typu média</label>
+                <div class="input-group">
+                    <span class="input-group-text">bi-</span>
+                    <input type="text" class="form-control" id="icon" name="icon" 
+                           value="{{ type ? type.icon : '' }}">
+                </div>
+                <div class="form-text">
+                    Zadejte název Bootstrap ikony bez předpony "bi-". 
+                    Například: "hdd" pro <i class="bi bi-hdd"></i>, 
+                    "disc" pro <i class="bi bi-disc"></i>, 
+                    "usb-drive" pro <i class="bi bi-usb-drive"></i>. 
+                    <a href="https://icons.getbootstrap.com/" target="_blank">Seznam všech ikon</a>
+                </div>
+                
+                <div class="mt-2">
+                    <p>Náhled ikony: 
+                        <span id="icon-preview" class="fs-4">
+                            {% if type and type.icon %}
+                                <i class="bi bi-{{ type.icon }}"></i>
+                            {% else %}
+                                <i class="bi bi-hdd"></i>
+                            {% endif %}
+                        </span>
+                    </p>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{{ path('app_settings_media_types') }}" class="btn btn-outline-secondary">Zrušit</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> {{ mode == 'new' ? 'Vytvořit typ média' : 'Uložit změny' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div class="card h-100">
+    <div class="card-header">
+        <h5 class="mb-0">Info</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            {{ mode == 'new' ? 'Vytvoření nového typu média.' : 'Úprava existujícího typu média.' }}
+        </div>
+        
+        <h6 class="mt-4">Tipy pro typy médií:</h6>
+        <ul>
+            <li>Používejte stručné a výstižné názvy</li>
+            <li>Vyberte vhodnou ikonu pro snadnou vizuální identifikaci</li>
+            <li>V popisu můžete uvést dodatečné informace (formát, kapacita, atp.)</li>
+        </ul>
+        
+        <h6 class="mt-4">Populární ikony pro média:</h6>
+        <div class="row">
+            <div class="col-4 text-center mb-3">
+                <i class="bi bi-hdd fs-2"></i>
+                <div class="small">hdd</div>
+            </div>
+            <div class="col-4 text-center mb-3">
+                <i class="bi bi-disc fs-2"></i>
+                <div class="small">disc</div>
+            </div>
+            <div class="col-4 text-center mb-3">
+                <i class="bi bi-usb-drive fs-2"></i>
+                <div class="small">usb-drive</div>
+            </div>
+            <div class="col-4 text-center mb-3">
+                <i class="bi bi-sd-card fs-2"></i>
+                <div class="small">sd-card</div>
+            </div>
+            <div class="col-4 text-center mb-3">
+                <i class="bi bi-device-ssd fs-2"></i>
+                <div class="small">device-ssd</div>
+            </div>
+            <div class="col-4 text-center mb-3">
+                <i class="bi bi-folder fs-2"></i>
+                <div class="small">folder</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const iconInput = document.getElementById('icon');
+    const iconPreview = document.getElementById('icon-preview');
+    
+    iconInput.addEventListener('input', function() {
+        const iconName = this.value.trim();
+        if (iconName) {
+            iconPreview.innerHTML = `<i class="bi bi-${iconName}"></i>`;
+        } else {
+            iconPreview.innerHTML = `<i class="bi bi-hdd"></i>`;
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{# templates/settings/index.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Nastavení{% endblock %}
+
+{% block content %}
+<div class="card h-100">
+    <div class="card-header">
+        <h5 class="mb-0">Nastavení aplikace</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="mb-0">Kategorie souborů</h6>
+                    </div>
+                    <div class="card-body">
+                        <p>Správa kategorií souborů a jejich přípon.</p>
+                        <p>Kategorie souborů umožňují filtrování a organizaci souborů podle typu (obrázky, dokumenty, videa, atd.).</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{{ path('app_settings_file_categories') }}" class="btn btn-primary">
+                            <i class="bi bi-folder"></i> Správa kategorií
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="mb-0">Typy médií</h6>
+                    </div>
+                    <div class="card-body">
+                        <p>Správa typů médií (HDD, DVD, USB, atd.).</p>
+                        <p>Typy médií určují způsob skladování a přístupu k souborům.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{{ path('app_settings_media_types') }}" class="btn btn-primary">
+                            <i class="bi bi-hdd"></i> Správa typů médií
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div class="card h-100">
+    <div class="card-header">
+        <h5 class="mb-0">Info</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            Zde můžete spravovat nastavení aplikace, jako jsou kategorie souborů a typy médií.
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,140 @@
+{# templates/media/edit.html.twig #}
+
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ media is defined ? 'Úprava média' : 'Nové médium' }} | Digital Media Collector{% endblock %}
+
+{% block content %}
+<script src="{{ asset('scripts/directory-browser.js') }}"></script>
+<div class="container-fluid p-0">
+
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>{{ media is defined ? 'Úprava média' : 'Nové médium' }}</h2>
+            <a href="{{ path('app_media_list') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Zpět na seznam
+            </a>
+        </div>
+
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    {% if media is defined %}
+                        Médium ID: {{ media.id }} ({{ media.identifier }})
+                    {% else %}
+                        Nové médium
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if media is defined %}
+                    <form method="post" action="{{ path('app_media_edit', { 'id': media.id }) }}">
+                {% else %}
+                    <form method="post" action="{{ path('app_media_create') }}">
+                {% endif %}
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Popis</label>
+                        <input type="text" class="form-control" id="description" name="description" 
+                               value="{{ media is defined ? media.description : '' }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="type" class="form-label">Typ média</label>
+                        <select class="form-select" id="type" name="type" required>
+                            {% for type in mediaTypes %}
+                                <option value="{{ type.id }}" 
+                                        {% if media is defined and media.mediaType.id == type.id %}selected{% endif %}>
+                                    {{ type.name }}
+                                    {% if type.description %}({{ type.description }}){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="path" class="form-label">Cesta</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="path" name="path" 
+                                   value="{{ media is defined ? media.path : '' }}" required>
+                        </div>
+                        <div class="form-text text-danger">
+                            Pozor: Ujistěte se, že cesta neobsahuje nadbytečné mezery na začátku nebo konci.
+                        </div>
+                    </div>
+
+                    {% if media is defined %}
+                    <div class="mb-3">
+                        <label class="form-label">Informace o médiu</label>
+                        <dl class="row">
+                            <dt class="col-sm-3">Identifikátor</dt>
+                            <dd class="col-sm-9">{{ media.identifier }}</dd>
+                            
+                            <dt class="col-sm-3">Vytvořeno</dt>
+                            <dd class="col-sm-9">{{ media.createdAt|date('d.m.Y H:i') }}</dd>
+                            
+                            <dt class="col-sm-3">Poslední sken</dt>
+                            <dd class="col-sm-9">{{ media.lastScannedAt ? media.lastScannedAt|date('d.m.Y H:i') : 'Nikdy' }}</dd>
+                        </dl>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ path('app_media_list') }}" class="btn btn-secondary">Zrušit</a>
+                        <button type="submit" class="btn btn-primary">
+                            {{ media is defined ? 'Uložit změny' : 'Vytvořit médium' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if media is defined %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Příkaz pro skenování</h5>
+            </div>
+            <div class="card-body">
+                <p>Pro spuštění skenování tohoto média zkopírujte a vložte tento příkaz do příkazové řádky:</p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="scanCommand" value="php bin/console media:scan --media-id={{ media.id }}" readonly>
+                    <button class="btn btn-outline-secondary" type="button" id="copyScanCommand">Kopírovat</button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if media is defined %}
+        // Kopírování příkazu do schránky
+        document.getElementById('copyScanCommand').addEventListener('click', function() {
+            const commandInput = document.getElementById('scanCommand');
+            commandInput.select();
+            document.execCommand('copy');
+            this.textContent = 'Zkopírováno!';
+            setTimeout(() => {
+                this.textContent = 'Kopírovat';
+            }, 2000);
+        });
+        {% endif %}
+
+        // Oříznutí mezer v poli pro cestu
+        document.getElementById('path').addEventListener('blur', function() {
+            this.value = this.value.trim();
+        });
+    });
+</script>
+{% endblock %}

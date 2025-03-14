@@ -1,0 +1,95 @@
+CREATE TABLE media (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    identifier VARCHAR(10) NOT NULL UNIQUE,
+                    description TEXT NOT NULL,
+                    path TEXT NOT NULL,
+                    media_type_id INTEGER NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    last_scanned_at DATETIME DEFAULT NULL,
+                    FOREIGN KEY (media_type_id) REFERENCES media_type(id)
+                );
+CREATE TABLE sqlite_sequence(name,seq);
+CREATE TABLE media_type (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name VARCHAR(50) NOT NULL,
+                    icon VARCHAR(50) NOT NULL,
+                    description TEXT DEFAULT NULL,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT NULL
+                );
+CREATE TABLE directories_zbv370 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                parent_id INTEGER, media_id INTEGER NOT NULL DEFAULT 1,
+                path TEXT NOT NULL,
+                name TEXT NOT NULL
+            );
+CREATE TABLE files_zbv370 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                directory_id INTEGER, media_id INTEGER NOT NULL DEFAULT 1 NOT NULL,
+                original_filename TEXT NOT NULL,
+                full_path TEXT NOT NULL,
+                content_hash CHAR(32) NOT NULL,
+                extension VARCHAR(50),
+                file_size BIGINT,
+                file_modified_at DATETIME,
+                FOREIGN KEY (directory_id) REFERENCES directories_zbv370(id)
+            );
+CREATE INDEX idx_zbv370_dirs_path ON directories_zbv370 (path);
+CREATE INDEX idx_zbv370_files_hash ON files_zbv370 (content_hash);
+CREATE INDEX idx_zbv370_files_dir ON files_zbv370 (directory_id);
+CREATE TABLE media_stats (
+                    media_id INTEGER PRIMARY KEY,
+                    files_count INTEGER,
+                    total_size BIGINT,
+                    last_calculated_at DATETIME,
+                    directories_count INTEGER,
+                    FOREIGN KEY(media_id) REFERENCES media(id)
+                );
+CREATE TABLE meta_types (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name VARCHAR(50) NOT NULL,            -- např. Author, Genre, Year
+                label VARCHAR(100) NOT NULL,          -- zobrazovaný název
+                description TEXT,                     -- popis typu metadat
+                data_type VARCHAR(20) NOT NULL,       -- text, number, date, boolean
+                is_multiple BOOLEAN DEFAULT false,    -- může mít soubor více hodnot tohoto typu?
+                created_at DATETIME NOT NULL
+                );
+CREATE TABLE meta_values (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_hash CHAR(32) NOT NULL,          -- hash souboru
+                meta_type_id INTEGER NOT NULL,        -- odkaz na typ metadat
+                value TEXT NOT NULL,                  -- hodnota (vždy jako text, konverze dle data_type)
+                FOREIGN KEY (meta_type_id) REFERENCES meta_types(id)
+            );
+CREATE INDEX idx_meta_values_file_hash ON meta_values(file_hash);
+CREATE TABLE file_category (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name VARCHAR(255) NOT NULL,
+                    description VARCHAR(255) DEFAULT NULL,
+                    icon VARCHAR(50) DEFAULT NULL,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME DEFAULT NULL
+                );
+CREATE TABLE file_extension (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    category_id INTEGER NOT NULL,
+                    name VARCHAR(50) NOT NULL,
+                    FOREIGN KEY(category_id) REFERENCES file_category(id)
+                );
+CREATE TABLE media_category_stats (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    media_id INTEGER,
+                    category_id INTEGER,
+                    files_count INTEGER,
+                    total_size BIGINT,
+                    FOREIGN KEY(media_id) REFERENCES media_stats(media_id),
+                    FOREIGN KEY(category_id) REFERENCES file_category(id)
+                );
+CREATE TABLE media_extension_stats (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    media_id INTEGER,
+                    extension VARCHAR(20),
+                    files_count INTEGER,
+                    total_size BIGINT,
+                    FOREIGN KEY(media_id) REFERENCES media_stats(media_id)
+                );

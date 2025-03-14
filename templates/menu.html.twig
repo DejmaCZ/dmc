@@ -1,0 +1,83 @@
+{# templates/partials/menu.html.twig #}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Média</h5>
+        <div>
+            <a href="" class="btn btn-sm btn-outline-secondary" title="Správa médií">
+                <i class="bi bi-gear"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="card-body p-0">
+        <form id="media-selector-form" method="get" action="{{ path('app_browser') }}">
+            <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="select-all-media">
+                    <label class="form-check-label" for="select-all-media">Vše</label>
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary">Zobrazit</button>
+            </div>
+            
+            <div class="media-list">
+                {% if media_list is defined and media_list|length > 0 %}
+                    <table class="table table-hover mb-0">
+                        <tbody>
+                            {% for media in media_list %}
+                                <tr>
+                                    <td class="py-2" style="width: 40px;">
+                                        <div class="form-check">
+                                            <input class="form-check-input media-checkbox" type="checkbox" name="media[]" value="{{ media.id }}" id="media-{{ media.id }}">
+                                        </div>
+                                    </td>
+                                    <td class="py-2" style="width: 30px;">
+                                        <i class="bi bi-hdd"></i>
+                                    </td>
+                                    <td class="py-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="media-{{ media.id }}" class="d-block mb-0" style="cursor: pointer;">
+                                                {{ media.description }}
+                                                <small class="text-muted d-block">{{ media.identifier }}</small>
+                                            </label>
+                                            <a href="{{ path('app_browser_media', {'mediaId': media.id}) }}" class="view-link btn btn-sm btn-link p-0 ms-2" title="Procházet">
+                                                <i class="bi bi-box-arrow-in-right"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="text-center p-3">
+                        <p class="text-muted mb-0">Žádná média</p>
+                        <a href="{{ path('app_home') }}" class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="bi bi-plus"></i> Přidat médium
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // "Vybrat vše" checkbox
+        var selectAllCheckbox = document.getElementById('select-all-media');
+        var mediaCheckboxes = document.querySelectorAll('.media-checkbox');
+        
+        selectAllCheckbox.addEventListener('change', function() {
+            mediaCheckboxes.forEach(function(checkbox) {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+        });
+        
+        // Zabránění spuštění události kliknutí na label, když uživatel kliká na odkaz
+        document.querySelectorAll('.view-link').forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                e.stopPropagation(); // Zastaví šíření události, takže label nebude reagovat
+            });
+        });
+    });
+</script>

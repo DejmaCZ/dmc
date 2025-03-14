@@ -1,0 +1,162 @@
+{# templates/browser/index.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Browser - {{ media.description }}    {% include 'browser/file_details.js.twig' %}
+{% endblock %}
+
+{% block stylesheets %}
+    <meta name="media-id" content="{{ media.id }}">
+{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ media.description }} <small class="text-muted">({{ media.identifier }})</small></h5>
+            <div>
+                <a href="{{ path('app_browser_media', {'mediaId': media.id}) }}" class="btn btn-sm btn-outline-secondary" title="Obnovit">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            {% include 'browser/breadcrumb.html.twig' with {'media': media, 'directory_path': directory_path|default([])} %}
+
+            <div class="mb-3">
+                <form method="get" action="{{ path('app_browser_media', {'mediaId': media.id}) }}" class="row g-2">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="search" placeholder="Hledat..." value="{{ app.request.query.get('search') }}">
+                            <button class="btn btn-outline-secondary" type="submit">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="filter" class="form-select">
+                            <option value="">Všechny typy souborů</option>
+                            <option value="document" {% if app.request.query.get('filter') == 'document' %}selected{% endif %}>Dokumenty</option>
+                            <option value="image" {% if app.request.query.get('filter') == 'image' %}selected{% endif %}>Obrázky</option>
+                            <option value="video" {% if app.request.query.get('filter') == 'video' %}selected{% endif %}>Videa</option>
+                            <option value="audio" {% if app.request.query.get('filter') == 'audio' %}selected{% endif %}>Audio</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="sort" class="form-select">
+                            <option value="name_asc" {% if app.request.query.get('sort') == 'name_asc' %}selected{% endif %}>Název (A-Z)</option>
+                            <option value="name_desc" {% if app.request.query.get('sort') == 'name_desc' %}selected{% endif %}>Název (Z-A)</option>
+                            <option value="size_asc" {% if app.request.query.get('sort') == 'size_asc' %}selected{% endif %}>Velikost (nejmenší)</option>
+                            <option value="size_desc" {% if app.request.query.get('sort') == 'size_desc' %}selected{% endif %}>Velikost (největší)</option>
+                            <option value="date_asc" {% if app.request.query.get('sort') == 'date_asc' %}selected{% endif %}>Datum (nejstarší)</option>
+                            <option value="date_desc" {% if app.request.query.get('sort') == 'date_desc' %}selected{% endif %}>Datum (nejnovější)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Filtrovat</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%">Název</th>
+                            <th style="width: 15%">Velikost</th>
+                            <th style="width: 20%">Změněno</th>
+                            <th style="width: 15%">Typ</th>
+                            <th style="width: 10%">Akce</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if directories is not empty %}
+                            {% for directory in directories %}
+                                <tr class="directory-row">
+                                    <td>
+                                        <i class="bi bi-folder text-warning"></i>
+                                        <a href="{{ path('app_browser_media', {'mediaId': media.id, 'directory': directory.id}) }}">
+                                            {{ directory.name }}
+                                        </a>
+                                    </td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>Složka</td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-info" title="Detaily">
+                                            <i class="bi bi-info-circle"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {% if files is not empty %}
+                            {% for file in files %}
+                                <tr class="file-row">
+                                    <td>
+                                        <i class="bi bi-file-earmark text-secondary"></i>
+                                        {{ file.original_filename }}
+                                    </td>
+                                    <td>{{ (file.file_size / 1024)|round(2) }} KB</td>
+                                    <td>{{ file.file_modified_at|date('d.m.Y H:i:s') }}</td>
+                                    <td>{{ file.extension|upper }}</td>
+                                    <td>
+                                        <a href="#" class="btn btn-sm btn-outline-info file-details" data-file-id="{{ file.id }}" title="Detaily">
+                                            <i class="bi bi-info-circle"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+
+                        {% if directories is empty and files is empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="bi bi-exclamation-circle me-2"></i>
+                                        Nenalezeny žádné soubory ani složky.
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <nav aria-label="Stránkování">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Předchozí</a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">Další</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+{% endblock %}
+
+{% block sidebar %}
+    <div class="card h-100">
+        <div class="card-header">
+            <h5 class="mb-0">Info</h5>
+        </div>
+        <div class="card-body">
+            <div id="file-details-container">
+                <div class="alert alert-info">
+                    Vyberte soubor pro zobrazení detailů.
+                </div>
+                
+                <div id="media-info">
+                    <h6>{{ media.description }}</h6>
+                    <p><strong>Identifikátor:</strong> {{ media.identifier }}</p>
+                    <p><strong>Cesta:</strong> {{ media.path }}</p>
+                    <p><strong>Naposledy skenováno:</strong> {{ media.lastScannedAt ? media.lastScannedAt|date('d.m.Y H:i:s') : 'Nikdy' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
