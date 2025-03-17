@@ -85,125 +85,7 @@
                 </nav>
             {% endif %}
             
-            {# Filtrování a vyhledávání #}
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h6 class="mb-0">Filtry a vyhledávání</h6>
-                </div>
-                <div class="card-body">
-                    <form method="get" action="{{ app.request.attributes.get('_route') == 'app_browser_media' 
-                                                   ? path('app_browser_media', {'id': selected_media[0].id}) 
-                                                   : path('app_browser_browse') }}" class="row g-3">
-                        {# Zachovat parametry #}
-                        {% if current_directory_id is defined and current_directory_id > 0 %}
-                            <input type="hidden" name="directory" value="{{ current_directory_id }}">
-                        {% endif %}
-                        
-                        {% if app.request.attributes.get('_route') == 'app_browser_browse' %}
-                            {% for media in selected_media %}
-                                <input type="hidden" name="media[]" value="{{ media.id }}">
-                            {% endfor %}
-                        {% endif %}
-                        
-                        {# Vyhledávání #}
-                        <div class="col-md-4">
-                            <label for="search" class="form-label">Vyhledávat</label>
-                            <input type="text" class="form-control" id="search" name="search" placeholder="Hledat v názvech..." value="{{ app.request.query.get('search') }}">
-                        </div>
-                        
-                        {# Filtr podle typu #}
-                        <div class="col-md-4">
-                            <label for="filterType" class="form-label">Filtrovat podle</label>
-                            <select class="form-select" id="filterType" name="filterType">
-                                <option value="">Bez filtru</option>
-                                <option value="extension" {% if app.request.query.get('filterType') == 'extension' %}selected{% endif %}>Přípony</option>
-                                <option value="category" {% if app.request.query.get('filterType') == 'category' %}selected{% endif %}>Kategorie</option>
-                            </select>
-                        </div>
-                        
-                        {# Filtr podle hodnoty - dynamicky se mění podle typu filtru #}
-                        <div class="col-md-4">
-                            <label for="filterValue" class="form-label">Hodnota filtru</label>
-                            
-                            {# Hodnota pro filtr přípony #}
-                            <input type="text" class="form-control" id="extensionFilter" name="filterValue" 
-                                   placeholder="Zadejte příponu (např. jpg, pdf)" 
-                                   value="{{ app.request.query.get('filterValue') }}"
-                                   style="{{ app.request.query.get('filterType') == 'extension' ? '' : 'display:none;' }}">
-                            
-                            {# Hodnota pro filtr kategorie #}
-                            <select class="form-select" id="categoryFilter" name="filterValue"
-                                    style="{{ app.request.query.get('filterType') == 'category' ? '' : 'display:none;' }}">
-                                <option value="">-- Vyberte kategorii --</option>
-                                {% if file_categories is defined %}
-                                    {% for category in file_categories %}
-                                        <option value="{{ category.id }}" {% if app.request.query.get('filterValue') == category.id %}selected{% endif %}>
-                                            {{ category.name }}
-                                        </option>
-                                    {% endfor %}
-                                {% endif %}
-                            </select>
-                            
-                            {# Prázdný input pro žádný filtr #}
-                            <input type="text" class="form-control" id="emptyFilter" 
-                                   placeholder="Nejprve vyberte typ filtru" disabled
-                                   style="{{ app.request.query.get('filterType') is empty ? '' : 'display:none;' }}">
-                        </div>
-                        
-                        {# Řazení #}
-                        <div class="col-md-4">
-                            <label for="sortBy" class="form-label">Řadit podle</label>
-                            <select class="form-select" id="sortBy" name="sortBy">
-                                <option value="original_filename" {% if app.request.query.get('sortBy') == 'original_filename' or app.request.query.get('sortBy') is empty %}selected{% endif %}>Názvu</option>
-                                <option value="extension" {% if app.request.query.get('sortBy') == 'extension' %}selected{% endif %}>Přípony</option>
-                                <option value="file_size" {% if app.request.query.get('sortBy') == 'file_size' %}selected{% endif %}>Velikosti</option>
-                                <option value="file_modified_at" {% if app.request.query.get('sortBy') == 'file_modified_at' %}selected{% endif %}>Data modifikace</option>
-                                {% if view_mode is not defined or view_mode == 'flat' %}
-                                    <option value="directory_path" {% if app.request.query.get('sortBy') == 'directory_path' %}selected{% endif %}>Cesty</option>
-                                {% endif %}
-                                {% if app.request.attributes.get('_route') == 'app_browser_browse' %}
-                                    <option value="media_identifier" {% if app.request.query.get('sortBy') == 'media_identifier' %}selected{% endif %}>Média</option>
-                                {% endif %}
-                            </select>
-                        </div>
-                        
-                        {# Směr řazení #}
-                        <div class="col-md-4">
-                            <label for="sortDir" class="form-label">Směr řazení</label>
-                            <select class="form-select" id="sortDir" name="sortDir">
-                                <option value="asc" {% if app.request.query.get('sortDir') == 'asc' or app.request.query.get('sortDir') is empty %}selected{% endif %}>Vzestupně (A-Z, 0-9)</option>
-                                <option value="desc" {% if app.request.query.get('sortDir') == 'desc' %}selected{% endif %}>Sestupně (Z-A, 9-0)</option>
-                            </select>
-                        </div>
-                        
-                        {# Velikost stránky #}
-                        <div class="col-md-4">
-                            <label for="pageSize" class="form-label">Položek na stránku</label>
-                            <select class="form-select" id="pageSize" name="pageSize">
-                                <option value="50" {% if app.request.query.get('pageSize') == '50' %}selected{% endif %}>50</option>
-                                <option value="100" {% if app.request.query.get('pageSize') == '100' or app.request.query.get('pageSize') is empty %}selected{% endif %}>100</option>
-                                <option value="200" {% if app.request.query.get('pageSize') == '200' %}selected{% endif %}>200</option>
-                                <option value="500" {% if app.request.query.get('pageSize') == '500' %}selected{% endif %}>500</option>
-                            </select>
-                        </div>
-                        
-                        {# Tlačítka #}
-                        <div class="col-12">
-                            <div class="d-flex justify-content-between">
-                                <a href="{{ app.request.attributes.get('_route') == 'app_browser_media' 
-                                        ? path('app_browser_reset_filters', {'media': [selected_media[0].id]}) 
-                                        : path('app_browser_reset_filters', {'media': app.request.query.all('media')}) }}" 
-                                   class="btn btn-outline-secondary">
-                                    <i class="bi bi-x-circle"></i> Reset filtrů
-                                </a>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-funnel"></i> Filtrovat
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
+            {{ include('browser/filter_form.html.twig') }}
 
 
 {# V části s filtry přidejte přepínač režimů zobrazení (mezi filtry a výsledky) #}
@@ -520,6 +402,42 @@
 
 {% block javascripts %}
 <script>
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Přepínač typu filtru
+            const filterTypeSelect = document.getElementById('filterType');
+            const extensionFilter = document.getElementById('extensionFilter');
+            const categoryFilter = document.getElementById('categoryFilter');
+            const emptyFilter = document.getElementById('emptyFilter');
+            
+            if (filterTypeSelect) {
+                filterTypeSelect.addEventListener('change', function() {
+                    extensionFilter.style.display = 'none';
+                    categoryFilter.style.display = 'none';
+                    emptyFilter.style.display = 'none';
+                    
+                    if (this.value === 'extension') {
+                        extensionFilter.style.display = '';
+                    } else if (this.value === 'category') {
+                        categoryFilter.style.display = '';
+                    } else {
+                        emptyFilter.style.display = '';
+                    }
+                });
+            }
+        });
+                
+        // Ukládání hodnot při jejich změně
+        extensionFilter.addEventListener('input', function() {
+            lastExtensionValue = this.value;
+        });
+        
+        categoryFilter.addEventListener('change', function() {
+            lastCategoryValue = this.value;
+        });
+    }
+
+
     document.addEventListener('DOMContentLoaded', function() {
         // Přepínač typu filtru
         const filterTypeSelect = document.getElementById('filterType');
@@ -768,5 +686,9 @@
             return dateString;
         }
     }
+
+
+
+
 </script>
 {% endblock %}

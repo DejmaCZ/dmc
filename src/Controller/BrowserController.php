@@ -71,8 +71,8 @@ class BrowserController extends BaseController
             'directoryId' => $request->query->getInt('directory', 0),
             'page' => max(1, $request->query->getInt('page', 1)),
             'pageSize' => $request->query->getInt('pageSize', self::PAGE_SIZE),
-            'filterType' => $request->query->get('filterType', ''),
-            'filterValue' => $request->query->get('filterValue', ''),
+            'extension' => $request->query->get('extension', ''),
+            'category' => $request->query->get('category', ''),
             'search' => $request->query->get('search', ''),
             'sortBy' => $request->query->get('sortBy', 'original_filename'),
             'sortDir' => $request->query->get('sortDir', 'asc')
@@ -93,8 +93,8 @@ class BrowserController extends BaseController
             'page_size' => $options['pageSize'],
             'current_directory_id' => $options['directoryId'],
             'directory_path' => $result['path'],
-            'filter_type' => $options['filterType'],
-            'filter_value' => $options['filterValue'],
+            // 'filter_type' => $options['filterType'],
+            // 'filter_value' => $options['filterValue'],
             'search' => $options['search'],
             'sort_by' => $options['sortBy'],
             'sort_dir' => $options['sortDir'],
@@ -289,8 +289,8 @@ class BrowserController extends BaseController
      *        - int directoryId: ID adresáře pro hierarchický režim
      *        - int page: číslo stránky
      *        - int pageSize: počet položek na stránku
-     *        - string filterType: typ filtru ('extension', 'category' atd.)
-     *        - string filterValue: hodnota filtru
+     *        - string extension: přípona pro filtrování
+     *        - string category: ID kategorie pro filtrování
      *        - string search: vyhledávací dotaz
      *        - string sortBy: sloupec pro řazení
      *        - string sortDir: směr řazení ('asc' nebo 'desc')
@@ -304,8 +304,8 @@ class BrowserController extends BaseController
             'directoryId' => 0,
             'page' => 1,
             'pageSize' => 100,
-            'filterType' => '',
-            'filterValue' => '',
+            'extension' => '',
+            'category' => '',
             'search' => '',
             'sortBy' => 'original_filename',
             'sortDir' => 'asc'
@@ -698,15 +698,15 @@ class BrowserController extends BaseController
         $hasWhere = stripos($sql, ' WHERE ') !== false;
         
         // Filtr podle přípony
-        if (!empty($options['filterType']) && $options['filterType'] === 'extension' && !empty($options['filterValue'])) {
-            $whereClauses[] = "f.extension = :extension";
-            $params['extension'] = $options['filterValue'];
-            $types['extension'] = \PDO::PARAM_STR;
+        if (!empty($options['extension'])) {
+            $whereClauses[] = "LOWER(f.extension) = LOWER(".$connection->quote($options['extension']).")";
+            // $params['extension'] = $options['extension'];
+            // $types['extension'] = \PDO::PARAM_STR;
         }
         
         // Filtr podle kategorie
-        if (!empty($options['filterType']) && $options['filterType'] === 'category' && !empty($options['filterValue'])) {
-            $categoryId = (int)$options['filterValue'];
+        if (!empty($options['category'])) {
+            $categoryId = (int)$options['category'];
             
             // Ověření, že kategorie existuje
             $category = $this->entityManager->getRepository(FileCategory::class)->find($categoryId);
@@ -717,7 +717,18 @@ class BrowserController extends BaseController
             }
         }
 
+        // Přidání vyhledávání
+        if (!empty($options['search'])) {
 
+            $searchTerm = $connection->quote('%' . $options['search'] . '%');
+            // $searchClause[] = "f.original_filename LIKE $searchTerm OR f.full_path LIKE $searchTerm OR d.path LIKE $searchTerm";
+
+
+            // $searchTerm = '%' . $options['search'] . '%';
+            // $whereClauses[] = "(f.original_filename LIKE :search OR f.full_path LIKE :search)";
+            // $params['search'] = $searchTerm;
+            // $types['search'] = \PDO::PARAM_STR;
+        }
         
         // Přidání WHERE klauzulí, pokud existují
         if (!empty($whereClauses)) {
@@ -729,8 +740,6 @@ class BrowserController extends BaseController
                 $countSql .= " WHERE " . implode(" AND ", $whereClauses);
             }
         }
-        
-
         
         return [$sql, $countSql, $params, $types];
     }
