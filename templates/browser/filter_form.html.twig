@@ -1,0 +1,377 @@
+{# templates/browser/filter_form.html.twig #}
+<div class="filter-form mb-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Filtry</h5>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="toggle-filters-btn">
+                    <i class="bi bi-caret-down-fill"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body" id="filters-container">
+            <form method="get" action="{{ current_route is defined ? path(current_route, {'mediaId': media.id}) : path('app_browser') }}" id="filter-form">
+                {# Zachováme vybraná média v hidden inputs #}
+                {% if selected_media is defined %}
+                    {% for media in selected_media %}
+                        <input type="hidden" name="media[]" value="{{ media.id }}">
+                    {% endfor %}
+                {% elseif media is defined %}
+                    <input type="hidden" name="media[]" value="{{ media.id }}">
+                {% endif %}
+                
+                {# Zachovat aktuální adresář #}
+                {% if current_directory_id is defined and current_directory_id > 0 %}
+                    <input type="hidden" name="directory" value="{{ current_directory_id }}">
+                {% endif %}
+                
+                <div class="row g-3">
+                    {# Základní filtry #}
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="search" class="form-label">Hledat v názvu</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="search" name="search" 
+                                       placeholder="Hledat..." value="{{ filters.search }}" autocomplete="off">
+                                <button class="btn btn-outline-secondary" type="submit">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Kategorie souborů</label>
+                            <select id="category" name="category" class="form-select">
+                                <option value="">Všechny kategorie</option>
+                                {% if file_categories is defined %}
+                                    {% for category in file_categories %}
+                                        <option value="{{ category.id }}" {% if filters.category == category.id %}selected{% endif %}>
+                                            {{ category.name }}
+                                        </option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="extension" class="form-label">Přípona souboru</label>
+                            <input type="text" class="form-control" id="extension" name="extension" 
+                                   placeholder="např. pdf, jpg, avi" value="{{ filters.extension }}">
+                            <div class="form-text">Zadejte příponu bez tečky, např. "pdf", "jpg"</div>
+                        </div>
+                    </div>
+                    
+                    {# Rozšířené filtry #}
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Velikost souboru</label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">Od</span>
+                                        <input type="text" class="form-control" name="size_min" placeholder="např. 1MB" 
+                                               value="{{ filters.size_min }}">
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">Do</span>
+                                        <input type="text" class="form-control" name="size_max" placeholder="např. 1GB" 
+                                               value="{{ filters.size_max }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-text">Formát: 10KB, 2MB, 1GB</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Datum modifikace</label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">Od</span>
+                                        <input type="date" class="form-control" name="date_from" 
+                                               value="{{ filters.date_from }}">
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">Do</span>
+                                        <input type="date" class="form-control" name="date_to" 
+                                               value="{{ filters.date_to }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {# Sekce pro meta filtry #}
+                    {% if meta_types is defined and meta_types|length > 0 %}
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label">Metadata</label>
+                                <div class="row g-2">
+                                    {% for meta_type in meta_types %}
+                                        <div class="col-md-4">
+                                            <div class="input-group mb-2">
+                                                <span class="input-group-text">{{ meta_type.label }}</span>
+                                                <input type="text" class="form-control" name="meta[{{ meta_type.id }}]" 
+                                                       placeholder="{{ meta_type.label }}" 
+                                                       value="{{ filters.meta[meta_type.id] is defined ? filters.meta[meta_type.id] : '' }}">
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {# Řazení a stránkování #}
+                    <div class="col-md-4">
+                        <label for="sort" class="form-label">Řazení</label>
+                        <select id="sort" name="sort" class="form-select">
+                            <option value="name_asc" {% if filters.sort == 'name_asc' %}selected{% endif %}>Název (A-Z)</option>
+                            <option value="name_desc" {% if filters.sort == 'name_desc' %}selected{% endif %}>Název (Z-A)</option>
+                            <option value="size_asc" {% if filters.sort == 'size_asc' %}selected{% endif %}>Velikost (nejmenší)</option>
+                            <option value="size_desc" {% if filters.sort == 'size_desc' %}selected{% endif %}>Velikost (největší)</option>
+                            <option value="date_asc" {% if filters.sort == 'date_asc' %}selected{% endif %}>Datum (nejstarší)</option>
+                            <option value="date_desc" {% if filters.sort == 'date_desc' %}selected{% endif %}>Datum (nejnovější)</option>
+                            <option value="extension_asc" {% if filters.sort == 'extension_asc' %}selected{% endif %}>Přípona (A-Z)</option>
+                            <option value="extension_desc" {% if filters.sort == 'extension_desc' %}selected{% endif %}>Přípona (Z-A)</option>
+                            <option value="path_asc" {% if filters.sort == 'path_asc' %}selected{% endif %}>Cesta (A-Z)</option>
+                            <option value="path_desc" {% if filters.sort == 'path_desc' %}selected{% endif %}>Cesta (Z-A)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="limit" class="form-label">Položek na stránku</label>
+                        <select id="limit" name="limit" class="form-select">
+                            <option value="20" {% if filters.limit == 20 %}selected{% endif %}>20</option>
+                            <option value="50" {% if filters.limit == 50 %}selected{% endif %}>50</option>
+                            <option value="100" {% if filters.limit == 100 %}selected{% endif %}>100</option>
+                            <option value="200" {% if filters.limit == 200 %}selected{% endif %}>200</option>
+                            <option value="500" {% if filters.limit == 500 %}selected{% endif %}>500</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-5">
+                        <label class="form-label d-block">&nbsp;</label>
+                        <div class="d-flex">
+                            <a href="{{ path('app_browser_reset_filters', app.request.query.all|merge({'media': app.request.query.all('media')})) }}" 
+                               class="btn btn-secondary me-2">
+                                <i class="bi bi-x-circle"></i> Reset filtrů
+                            </a>
+                            <button type="submit" class="btn btn-primary flex-grow-1">
+                                <i class="bi bi-funnel"></i> Filtrovat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                {# Část pro uložené pohledy #}
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">Uložené pohledy</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#saveViewModal">
+                            <i class="bi bi-bookmark-plus"></i> Uložit aktuální pohled
+                        </button>
+                    </div>
+                    <div id="saved-views-container">
+                        <div class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                                <span class="visually-hidden">Načítání...</span>
+                            </div>
+                            <span class="ms-2">Načítání uložených pohledů...</span>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Modal pro uložení pohledu #}
+<div class="modal fade" id="saveViewModal" tabindex="-1" aria-labelledby="saveViewModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="saveViewModalLabel">Uložit aktuální pohled</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="save-view-form" action="{{ path('app_browser_save_view') }}" method="post">
+                    <div class="mb-3">
+                        <label for="view_name" class="form-label">Název pohledu</label>
+                        <input type="text" class="form-control" id="view_name" name="view_name" required>
+                        <div class="form-text">Zadejte název, pod kterým chcete uložit aktuální nastavení filtrů.</div>
+                    </div>
+                    <input type="hidden" name="current_url" value="{{ app.request.uri }}">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
+                <button type="button" class="btn btn-primary" id="save-view-btn">Uložit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# JavaScript pro autocomplete a filtry #}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle zobrazení filtrů
+        const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
+        const filtersContainer = document.getElementById('filters-container');
+        
+        if (toggleFiltersBtn && filtersContainer) {
+            toggleFiltersBtn.addEventListener('click', function() {
+                if (filtersContainer.style.display === 'none') {
+                    filtersContainer.style.display = 'block';
+                    toggleFiltersBtn.innerHTML = '<i class="bi bi-caret-up-fill"></i>';
+                } else {
+                    filtersContainer.style.display = 'none';
+                    toggleFiltersBtn.innerHTML = '<i class="bi bi-caret-down-fill"></i>';
+                }
+            });
+        }
+        
+        // Načtení uložených pohledů
+        loadSavedViews();
+        
+        // Autocomplete pro vyhledávání
+        setupAutocomplete();
+        
+        // Uložení pohledu
+        const saveViewBtn = document.getElementById('save-view-btn');
+        if (saveViewBtn) {
+            saveViewBtn.addEventListener('click', function() {
+                const form = document.getElementById('save-view-form');
+                if (form) {
+                    const formData = new FormData(form);
+                    
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Zavřít modal
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('saveViewModal'));
+                            modal.hide();
+                            
+                            // Obnovit uložené pohledy
+                            loadSavedViews();
+                            
+                            // Vyčistit formulář
+                            form.reset();
+                        } else {
+                            alert('Chyba při ukládání pohledu: ' + (data.error || 'Neznámá chyba'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Chyba při ukládání pohledu');
+                    });
+                }
+            });
+        }
+    });
+    
+    function loadSavedViews() {
+        const container = document.getElementById('saved-views-container');
+        if (!container) return;
+        
+        fetch('{{ path('app_api_browser_saved_views') }}')
+            .then(response => response.json())
+            .then(data => {
+                if (Object.keys(data.views).length === 0) {
+                    container.innerHTML = '<div class="alert alert-info mb-0">Zatím nemáte uložené žádné pohledy.</div>';
+                    return;
+                }
+                
+                let html = '<div class="list-group">';
+                for (const [name, url] of Object.entries(data.views)) {
+                    html += `
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="${url}" class="text-decoration-none flex-grow-1">${name}</a>
+                        <button type="button" class="btn btn-sm btn-outline-danger delete-view-btn" data-view-name="${name}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>`;
+                }
+                html += '</div>';
+                
+                container.innerHTML = html;
+                
+                // Přidat event listenery pro mazání pohledů
+                document.querySelectorAll('.delete-view-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const viewName = this.getAttribute('data-view-name');
+                        if (confirm(`Opravdu chcete smazat pohled "${viewName}"?`)) {
+                            deleteView(viewName);
+                        }
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                container.innerHTML = '<div class="alert alert-danger mb-0">Chyba při načítání uložených pohledů.</div>';
+            });
+    }
+    
+    function deleteView(viewName) {
+        fetch(`{{ path('app_api_browser_delete_view', {'name': '__NAME__'}) }}`.replace('__NAME__', encodeURIComponent(viewName)))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadSavedViews();
+                } else {
+                    alert('Chyba při mazání pohledu: ' + (data.error || 'Neznámá chyba'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Chyba při mazání pohledu');
+            });
+    }
+    
+    function setupAutocomplete() {
+        const searchInput = document.getElementById('search');
+        if (!searchInput) return;
+        
+        // Event listener pro vyhledávání během psaní
+        let debounceTimer;
+        searchInput.addEventListener('input', function() {
+            const term = this.value.trim();
+            
+            clearTimeout(debounceTimer);
+            
+            if (term.length < 2) return;
+            
+            debounceTimer = setTimeout(function() {
+                // Získat všechny vybraná média z formuláře
+                const mediaInputs = document.querySelectorAll('input[name="media[]"]');
+                const mediaIds = Array.from(mediaInputs).map(input => input.value);
+                
+                if (mediaIds.length === 0) return;
+                
+                const params = new URLSearchParams();
+                params.append('term', term);
+                mediaIds.forEach(id => params.append('media[]', id));
+                
+                fetch(`{{ path('app_api_browser_autocomplete') }}?${params.toString()}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.suggestions.length === 0) return;
+                        
+                        // TODO: Implementace našeptávače UI
+                        console.log('Suggestions:', data.suggestions);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }, 300);
+        });
+    }
+</script>

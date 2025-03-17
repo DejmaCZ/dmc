@@ -5,18 +5,27 @@ namespace App\Controller;
 use App\Entity\Media;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 class BaseController extends AbstractController
 {
     protected $entityManager;
+    protected $requestStack;
 
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(EntityManagerInterface $entityManager, RequestStack $requestStack)
     {
         $this->entityManager = $entityManager;
+        $this->requestStack = $requestStack;
     }
 
+
+    protected function getSession()
+    {
+        return $this->requestStack->getSession();
+    }
+    
     #[Route('/', name: 'app_home')]
     public function index(): Response
     {
@@ -97,7 +106,7 @@ class BaseController extends AbstractController
         ]);
     }
     
-    private function formatSize(int $bytes): string
+    protected function formatSize(int $bytes): string
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
         $size = $bytes;
@@ -111,7 +120,7 @@ class BaseController extends AbstractController
         return round($size, 2) . ' ' . $units[$unitIndex];
     }
 
-    // V BaseController.php
+    // Přepsání původní metody render z AbstractController
     public function render(string $view, array $parameters = [], Response $response = null): Response
     {
         // Přidat společné proměnné

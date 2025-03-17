@@ -1,0 +1,138 @@
+{# templates/settings/meta_type_form.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ mode == 'new' ? 'Nový typ metadat' : 'Úprava typu metadat' }}{% endblock %}
+
+{% block content %}
+<div class="card h-100">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">{{ mode == 'new' ? 'Nový typ metadat' : 'Úprava typu metadat' }}</h5>
+        <a href="{{ path('app_settings_meta_types') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Zpět na seznam
+        </a>
+    </div>
+    <div class="card-body">
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+        
+        <form method="post">
+            <div class="mb-3">
+                <label for="name" class="form-label">Systémový název *</label>
+                <input type="text" class="form-control" id="name" name="name" required 
+                       value="{{ metaType.name|default('') }}">
+                <div class="form-text">Jednoslovný název (např. "Author", "Year", "Genre"). Používá se v systému.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="label" class="form-label">Zobrazovaný název *</label>
+                <input type="text" class="form-control" id="label" name="label" required 
+                       value="{{ metaType.label|default('') }}">
+                <div class="form-text">Název, který se zobrazuje uživatelům (např. "Autor", "Rok", "Žánr").</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Popis</label>
+                <textarea class="form-control" id="description" name="description" rows="2">{{ metaType.description|default('') }}</textarea>
+                <div class="form-text">Nepovinný popis typu metadat.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="data_type" class="form-label">Datový typ *</label>
+                <select class="form-select" id="data_type" name="data_type" required>
+                    <option value="text" {% if metaType is defined and metaType.dataType == 'text' %}selected{% endif %}>
+                        Text
+                    </option>
+                    <option value="number" {% if metaType is defined and metaType.dataType == 'number' %}selected{% endif %}>
+                        Číslo
+                    </option>
+                    <option value="date" {% if metaType is defined and metaType.dataType == 'date' %}selected{% endif %}>
+                        Datum
+                    </option>
+                    <option value="boolean" {% if metaType is defined and metaType.dataType == 'boolean' %}selected{% endif %}>
+                        Ano/Ne
+                    </option>
+                </select>
+                <div class="form-text">Určuje, jaký typ hodnot bude tento metadata typ obsahovat.</div>
+            </div>
+            
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="is_multiple" name="is_multiple" 
+                       {% if metaType is defined and metaType.isMultiple %}checked{% endif %}>
+                <label class="form-check-label" for="is_multiple">Povolit více hodnot</label>
+                <div class="form-text">Pokud je zaškrtnuto, soubor může mít více než jednu hodnotu tohoto typu metadat (např. více autorů, více žánrů).</div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{{ path('app_settings_meta_types') }}" class="btn btn-outline-secondary">Zrušit</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> {{ mode == 'new' ? 'Vytvořit typ metadat' : 'Uložit změny' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div class="card h-100">
+    <div class="card-header">
+        <h5 class="mb-0">Info</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            {{ mode == 'new' ? 'Vytvoření nového typu metadat.' : 'Úprava existujícího typu metadat.' }}
+        </div>
+        
+        <h6 class="mt-4">Tipy pro typy metadat:</h6>
+        <ul>
+            <li>Používejte jednoslovné, výstižné systémové názvy</li>
+            <li>Pro zobrazovaný název můžete použít národní znaky a mezery</li>
+            <li>Vyberte vhodný datový typ podle charakteru ukládaných dat</li>
+            <li>Povolte více hodnot pro metadata, která mohou mít více různých hodnot (např. žánry, tagy)</li>
+        </ul>
+        
+        <h6 class="mt-4">Příklady metadat:</h6>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Systémový název</th>
+                    <th>Zobr. název</th>
+                    <th>Datový typ</th>
+                    <th>Více hodnot</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Author</td>
+                    <td>Autor</td>
+                    <td>text</td>
+                    <td>Ano</td>
+                </tr>
+                <tr>
+                    <td>Year</td>
+                    <td>Rok</td>
+                    <td>number</td>
+                    <td>Ne</td>
+                </tr>
+                <tr>
+                    <td>Genre</td>
+                    <td>Žánr</td>
+                    <td>text</td>
+                    <td>Ano</td>
+                </tr>
+                <tr>
+                    <td>Favorite</td>
+                    <td>Oblíbené</td>
+                    <td>boolean</td>
+                    <td>Ne</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

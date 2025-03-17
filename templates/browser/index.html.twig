@@ -1,17 +1,29 @@
 {# templates/browser/index.html.twig #}
 {% extends 'base.html.twig' %}
 
-{% block title %}Browser - {{ media.description }}    {% include 'browser/file_details.js.twig' %}
-{% endblock %}
+{% block title %}Browser - {{ media.description }}{% endblock %}
 
 {% block stylesheets %}
     <meta name="media-id" content="{{ media.id }}">
+    <style>
+        .file-row:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+            cursor: pointer;
+        }
+        .file-row.selected {
+            background-color: rgba(0, 123, 255, 0.2);
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">{{ media.description }} <small class="text-muted">({{ media.identifier }})</small></h5>
+            <h5 class="mb-0">
+                <i class="bi bi-{{ media.mediaType.icon }}"></i>
+                {{ media.description }} 
+                <small class="text-muted">({{ media.identifier }})</small>
+            </h5>
             <div>
                 <a href="{{ path('app_browser_media', {'mediaId': media.id}) }}" class="btn btn-sm btn-outline-secondary" title="Obnovit">
                     <i class="bi bi-arrow-clockwise"></i>
@@ -19,45 +31,41 @@
             </div>
         </div>
         <div class="card-body">
+            {# Breadcrumb navigace #}
             {% include 'browser/breadcrumb.html.twig' with {'media': media, 'directory_path': directory_path|default([])} %}
-
-            <div class="mb-3">
-                <form method="get" action="{{ path('app_browser_media', {'mediaId': media.id}) }}" class="row g-2">
-                    <div class="col-md-4">
-                        <div class="input-group">
-                            <input type="text" class="form-control" name="search" placeholder="Hledat..." value="{{ app.request.query.get('search') }}">
-                            <button class="btn btn-outline-secondary" type="submit">
-                                <i class="bi bi-search"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <select name="filter" class="form-select">
-                            <option value="">Všechny typy souborů</option>
-                            <option value="document" {% if app.request.query.get('filter') == 'document' %}selected{% endif %}>Dokumenty</option>
-                            <option value="image" {% if app.request.query.get('filter') == 'image' %}selected{% endif %}>Obrázky</option>
-                            <option value="video" {% if app.request.query.get('filter') == 'video' %}selected{% endif %}>Videa</option>
-                            <option value="audio" {% if app.request.query.get('filter') == 'audio' %}selected{% endif %}>Audio</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select name="sort" class="form-select">
-                            <option value="name_asc" {% if app.request.query.get('sort') == 'name_asc' %}selected{% endif %}>Název (A-Z)</option>
-                            <option value="name_desc" {% if app.request.query.get('sort') == 'name_desc' %}selected{% endif %}>Název (Z-A)</option>
-                            <option value="size_asc" {% if app.request.query.get('sort') == 'size_asc' %}selected{% endif %}>Velikost (nejmenší)</option>
-                            <option value="size_desc" {% if app.request.query.get('sort') == 'size_desc' %}selected{% endif %}>Velikost (největší)</option>
-                            <option value="date_asc" {% if app.request.query.get('sort') == 'date_asc' %}selected{% endif %}>Datum (nejstarší)</option>
-                            <option value="date_desc" {% if app.request.query.get('sort') == 'date_desc' %}selected{% endif %}>Datum (nejnovější)</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">Filtrovat</button>
-                    </div>
-                </form>
+            
+            {# Formulář filtrů #}
+            {% include 'browser/filter_form.html.twig' with {
+                'filters': filters,
+                'file_categories': file_categories,
+                'meta_types': meta_types,
+                'media': media,
+                'current_directory_id': current_directory_id,
+                'current_route': 'app_browser_media'
+            } %}
+            
+            {# Aktivní filtry #}
+            {% include 'browser/active_filters.html.twig' with {'active_filters': active_filters} %}
+            
+            {# Statistika výsledků #}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <span class="badge bg-primary me-2">{{ total_files }} souborů</span>
+                    <span class="badge bg-secondary">{{ total_directories }} složek</span>
+                </div>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary active" id="view-list">
+                        <i class="bi bi-list"></i> Seznam
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="view-grid" disabled>
+                        <i class="bi bi-grid"></i> Mřížka
+                    </button>
+                </div>
             </div>
             
+            {# Seznam souborů a složek #}
             <div class="table-responsive">
-                <table class="table table-hover table-striped">
+                <table class="table table-hover">
                     <thead>
                         <tr>
                             <th style="width: 40%">Název</th>
@@ -81,7 +89,7 @@
                                     <td>-</td>
                                     <td>Složka</td>
                                     <td>
-                                        <a href="#" class="btn btn-sm btn-outline-info" title="Detaily">
+                                        <a href="#" class="btn btn-sm btn-outline-info directory-info" data-directory-id="{{ directory.id }}" title="Detaily">
                                             <i class="bi bi-info-circle"></i>
                                         </a>
                                     </td>
@@ -91,18 +99,25 @@
                         
                         {% if files is not empty %}
                             {% for file in files %}
-                                <tr class="file-row">
+                                <tr class="file-row" data-file-id="{{ file.id }}">
                                     <td>
-                                        <i class="bi bi-file-earmark text-secondary"></i>
+                                        <i class="bi bi-file-earmark-{{ file.extension|default('text') }} text-secondary"></i>
                                         {{ file.original_filename }}
                                     </td>
                                     <td>{{ (file.file_size / 1024)|round(2) }} KB</td>
                                     <td>{{ file.file_modified_at|date('d.m.Y H:i:s') }}</td>
-                                    <td>{{ file.extension|upper }}</td>
+                                    <td>{{ file.extension|upper|default('???') }}</td>
                                     <td>
-                                        <a href="#" class="btn btn-sm btn-outline-info file-details" data-file-id="{{ file.id }}" title="Detaily">
-                                            <i class="bi bi-info-circle"></i>
-                                        </a>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="#" class="btn btn-outline-info file-details" data-file-id="{{ file.id }}" title="Detaily">
+                                                <i class="bi bi-info-circle"></i>
+                                            </a>
+                                            {% if file.extension in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'] %}
+                                                <a href="#" class="btn btn-outline-success file-preview" data-file-id="{{ file.id }}" title="Náhled">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -122,19 +137,30 @@
                 </table>
             </div>
             
-            <nav aria-label="Stránkování">
-                <ul class="pagination justify-content-center">
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Předchozí</a>
-                    </li>
-                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                    <li class="page-item"><a class="page-link" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    <li class="page-item">
-                        <a class="page-link" href="#">Další</a>
-                    </li>
-                </ul>
-            </nav>
+            {# Stránkování #}
+            {% include 'browser/pagination.html.twig' with {'pagination': pagination} %}
+        </div>
+    </div>
+    
+    {# Modal pro náhled obrázku #}
+    <div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imagePreviewTitle">Náhled obrázku</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-0" id="imagePreviewBody">
+                    <div class="d-flex justify-content-center align-items-center h-100 p-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Načítání...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zavřít</button>
+                </div>
+            </div>
         </div>
     </div>
 {% endblock %}
@@ -153,10 +179,233 @@
                 <div id="media-info">
                     <h6>{{ media.description }}</h6>
                     <p><strong>Identifikátor:</strong> {{ media.identifier }}</p>
+                    <p><strong>Typ:</strong> {{ media.mediaType.name }}</p>
                     <p><strong>Cesta:</strong> {{ media.path }}</p>
                     <p><strong>Naposledy skenováno:</strong> {{ media.lastScannedAt ? media.lastScannedAt|date('d.m.Y H:i:s') : 'Nikdy' }}</p>
                 </div>
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Přidání události kliknutí na řádky souborů
+        document.querySelectorAll('.file-row').forEach(row => {
+            row.addEventListener('click', function(e) {
+                // Pokud bylo kliknuto na tlačítko nebo odkaz, ignorujeme kliknutí na řádek
+                if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.tagName === 'I') {
+                    return;
+                }
+                
+                // Odstranění označení ze všech řádků
+                document.querySelectorAll('.file-row').forEach(r => r.classList.remove('selected'));
+                
+                // Označení aktuálního řádku
+                this.classList.add('selected');
+                
+                // Získání ID souboru a zobrazení detailů
+                const fileId = this.getAttribute('data-file-id');
+                showFileDetails(fileId);
+            });
+        });
+        
+        // Přidání události kliknutí na tlačítka detailů souborů
+        document.querySelectorAll('.file-details').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const fileId = this.getAttribute('data-file-id');
+                showFileDetails(fileId);
+                
+                // Označení řádku
+                document.querySelectorAll('.file-row').forEach(row => row.classList.remove('selected'));
+                this.closest('tr').classList.add('selected');
+            });
+        });
+        
+        // Náhled obrázku
+        document.querySelectorAll('.file-preview').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const fileId = this.getAttribute('data-file-id');
+                const mediaId = document.querySelector('meta[name="media-id"]').getAttribute('content');
+                
+                // Zobrazit modal pro náhled
+                const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+                modal.show();
+                
+                // Načíst detaily souboru
+                fetch(`/api/file/${mediaId}/${fileId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const previewTitle = document.getElementById('imagePreviewTitle');
+                        const previewBody = document.getElementById('imagePreviewBody');
+                        
+                        previewTitle.textContent = data.original_filename;
+                        
+                        if (data.exists) {
+                            // TODO: Implementace načtení a zobrazení obrázku
+                            previewBody.innerHTML = `<div class="alert alert-info">Náhled obrázku bude implementován později.</div>`;
+                        } else {
+                            previewBody.innerHTML = `
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    Soubor nebyl fyzicky nalezen na disku.
+                                </div>`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading file details:', error);
+                    });
+            });
+        });
+    });
+    
+    function showFileDetails(fileId) {
+        const mediaId = document.querySelector('meta[name="media-id"]').getAttribute('content');
+        const detailsContainer = document.getElementById('file-details-container');
+        
+        // Zobrazení načítacího indikátoru
+        detailsContainer.innerHTML = `
+            <div class="text-center p-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Načítání...</span>
+                </div>
+                <p class="mt-2">Načítám detaily souboru...</p>
+            </div>
+        `;
+        
+        // Načtení detailů souboru
+        fetch(`/api/file/${mediaId}/${fileId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Nepodařilo se načíst detaily souboru');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Sestavení HTML pro metadata
+                let metadataHtml = '';
+                if (data.metadata && data.metadata.length > 0) {
+                    metadataHtml = `
+                        <h6 class="mt-3 border-bottom pb-2">Metadata</h6>
+                        <table class="table table-sm">
+                            <tbody>
+                    `;
+                    
+                    data.metadata.forEach(meta => {
+                        metadataHtml += `
+                            <tr>
+                                <th>${meta.label}:</th>
+                                <td>${meta.value}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    metadataHtml += `
+                            </tbody>
+                        </table>
+                    `;
+                }
+                
+                // Zobrazení detailů souboru
+                detailsContainer.innerHTML = `
+                    <div class="file-details-content">
+                        <h6 class="mb-3 border-bottom pb-2">
+                            <i class="bi bi-file-earmark-${data.extension || 'text'}"></i>
+                            ${data.original_filename}
+                        </h6>
+                        
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <th>Cesta:</th>
+                                    <td class="text-break">${data.full_path}</td>
+                                </tr>
+                                <tr>
+                                    <th>Velikost:</th>
+                                    <td>${data.formatted_size}</td>
+                                </tr>
+                                <tr>
+                                    <th>Poslední změna:</th>
+                                    <td>${formatDate(data.file_modified_at)}</td>
+                                </tr>
+                                <tr>
+                                    <th>Přípona:</th>
+                                    <td>${data.extension ? data.extension.toUpperCase() : 'Bez přípony'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Hash obsahu:</th>
+                                    <td><span class="text-monospace small">${data.content_hash}</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td>
+                                        ${data.exists 
+                                            ? '<span class="badge bg-success">Soubor existuje</span>' 
+                                            : '<span class="badge bg-danger">Soubor nenalezen</span>'}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        ${metadataHtml}
+                        
+                        ${data.exists && ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(data.extension) ? `
+                            <div class="mt-3 d-grid">
+                                <button type="button" class="btn btn-outline-primary file-preview" data-file-id="${data.id}">
+                                    <i class="bi bi-eye"></i> Zobrazit náhled
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                // Přidat event listener pro náhled
+                const previewBtn = detailsContainer.querySelector('.file-preview');
+                if (previewBtn) {
+                    previewBtn.addEventListener('click', function() {
+                        const fileId = this.getAttribute('data-file-id');
+                        
+                        // Zobrazit modal pro náhled
+                        const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+                        modal.show();
+                        
+                        // Nastavit titulek a obsah modalu
+                        const previewTitle = document.getElementById('imagePreviewTitle');
+                        const previewBody = document.getElementById('imagePreviewBody');
+                        
+                        previewTitle.textContent = data.original_filename;
+                        
+                        // TODO: Implementace náhledu obrázku
+                        previewBody.innerHTML = `<div class="alert alert-info">Náhled obrázku bude implementován později.</div>`;
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Chyba při načítání detailů:', error);
+                detailsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Nepodařilo se načíst detaily souboru.
+                    </div>
+                `;
+            });
+    }
+    
+    // Pomocná funkce pro formátování data
+    function formatDate(dateString) {
+        if (!dateString) return 'Neznámé';
+        
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('cs-CZ') + ' ' + date.toLocaleTimeString('cs-CZ');
+        } catch (e) {
+            return dateString;
+        }
+    }
+</script>
 {% endblock %}

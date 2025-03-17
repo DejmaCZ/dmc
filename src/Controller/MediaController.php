@@ -303,17 +303,17 @@ class MediaController extends BaseController
         return $this->redirectToRoute('app_media_list');
     }
 
-    private function formatSize(int $bytes): string
-    {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $size = $bytes;
-        $unitIndex = 0;
+    // private function formatSize(int $bytes): string
+    // {
+    //     $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    //     $size = $bytes;
+    //     $unitIndex = 0;
         
-        while ($size >= 1024 && $unitIndex < count($units) - 1) {
-            $size /= 1024;
-            $unitIndex++;
-        }
+    //     while ($size >= 1024 && $unitIndex < count($units) - 1) {
+    //         $size /= 1024;
+    //         $unitIndex++;
+    //     }
         
-        return round($size, 2) . ' ' . $units[$unitIndex];
-    }
+    //     return round($size, 2) . ' ' . $units[$unitIndex];
+    // }
 }

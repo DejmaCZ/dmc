@@ -1,0 +1,73 @@
+{# templates/browser/pagination.html.twig #}
+{% if pagination is defined and pagination.total > 0 %}
+    <nav aria-label="Stránkování">
+        <ul class="pagination justify-content-center">
+            {# První stránka #}
+            <li class="page-item {{ not pagination.has_previous ? 'disabled' }}">
+                <a class="page-link" href="{{ path(app.request.attributes.get('_route'), 
+                    app.request.query.all|merge({
+                        page: 1
+                    })
+                ) }}" aria-label="První">
+                    <i class="bi bi-chevron-double-left"></i>
+                </a>
+            </li>
+            
+            {# Předchozí stránka #}
+            <li class="page-item {{ not pagination.has_previous ? 'disabled' }}">
+                <a class="page-link" href="{{ path(app.request.attributes.get('_route'), 
+                    app.request.query.all|merge({
+                        page: pagination.previous_page
+                    })
+                ) }}" aria-label="Předchozí">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+            
+            {# Stránky #}
+            {% set start_page = max(1, pagination.current_page - 2) %}
+            {% set end_page = min(pagination.total_pages, start_page + 4) %}
+            {% set start_page = max(1, end_page - 4) %}
+            
+            {% for i in start_page..end_page %}
+                <li class="page-item {{ pagination.current_page == i ? 'active' }}">
+                    <a class="page-link" href="{{ path(app.request.attributes.get('_route'), 
+                        app.request.query.all|merge({
+                            page: i
+                        })
+                    ) }}">{{ i }}</a>
+                </li>
+            {% endfor %}
+            
+            {# Další stránka #}
+            <li class="page-item {{ not pagination.has_next ? 'disabled' }}">
+                <a class="page-link" href="{{ path(app.request.attributes.get('_route'), 
+                    app.request.query.all|merge({
+                        page: pagination.next_page
+                    })
+                ) }}" aria-label="Další">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            
+            {# Poslední stránka #}
+            <li class="page-item {{ not pagination.has_next ? 'disabled' }}">
+                <a class="page-link" href="{{ path(app.request.attributes.get('_route'), 
+                    app.request.query.all|merge({
+                        page: pagination.total_pages
+                    })
+                ) }}" aria-label="Poslední">
+                    <i class="bi bi-chevron-double-right"></i>
+                </a>
+            </li>
+        </ul>
+        
+        <div class="text-center small text-muted mt-2">
+            Zobrazeno {{ (pagination.current_page - 1) * pagination.limit + 1 }} až 
+            {{ min(pagination.total, pagination.current_page * pagination.limit) }} 
+            z celkem {{ pagination.total }} položek
+        </div>
+    </nav>
+{% else %}
+    {# Pokud není co stránkovat, nic nezobrazujeme #}
+{% endif %}

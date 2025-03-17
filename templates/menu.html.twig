@@ -1,9 +1,9 @@
-{# templates/partials/menu.html.twig #}
+{# templates/menu.html.twig #}
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">Média</h5>
         <div>
-            <a href="" class="btn btn-sm btn-outline-secondary" title="Správa médií">
+            <a href="{{ path('app_media_list') }}" class="btn btn-sm btn-outline-secondary" title="Správa médií">
                 <i class="bi bi-gear"></i>
             </a>
         </div>
@@ -27,11 +27,13 @@
                                 <tr>
                                     <td class="py-2" style="width: 40px;">
                                         <div class="form-check">
-                                            <input class="form-check-input media-checkbox" type="checkbox" name="media[]" value="{{ media.id }}" id="media-{{ media.id }}">
+                                            <input class="form-check-input media-checkbox" type="checkbox" name="media[]" value="{{ media.id }}" 
+                                                   id="media-{{ media.id }}" 
+                                                   {% if app.request.query.all('media') is not empty and media.id in app.request.query.all('media') %}checked{% endif %}>
                                         </div>
                                     </td>
                                     <td class="py-2" style="width: 30px;">
-                                        <i class="bi bi-hdd"></i>
+                                        <i class="bi bi-{{ media.mediaType.icon|default('hdd') }}"></i>
                                     </td>
                                     <td class="py-2">
                                         <div class="d-flex justify-content-between align-items-center">
@@ -51,7 +53,7 @@
                 {% else %}
                     <div class="text-center p-3">
                         <p class="text-muted mb-0">Žádná média</p>
-                        <a href="{{ path('app_home') }}" class="btn btn-sm btn-outline-primary mt-2">
+                        <a href="{{ path('app_media_new') }}" class="btn btn-sm btn-outline-primary mt-2">
                             <i class="bi bi-plus"></i> Přidat médium
                         </a>
                     </div>
@@ -67,10 +69,30 @@
         var selectAllCheckbox = document.getElementById('select-all-media');
         var mediaCheckboxes = document.querySelectorAll('.media-checkbox');
         
+        // Zkontrolovat, zda jsou všechna média vybrána
+        function updateSelectAllCheckbox() {
+            if (mediaCheckboxes.length === 0) return;
+            
+            const allChecked = Array.from(mediaCheckboxes).every(checkbox => checkbox.checked);
+            const someChecked = Array.from(mediaCheckboxes).some(checkbox => checkbox.checked);
+            
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = someChecked && !allChecked;
+        }
+        
+        // Při načtení stránky zkontrolovat stav
+        updateSelectAllCheckbox();
+        
+        // Změna "Vybrat vše" checkboxu
         selectAllCheckbox.addEventListener('change', function() {
             mediaCheckboxes.forEach(function(checkbox) {
                 checkbox.checked = selectAllCheckbox.checked;
             });
+        });
+        
+        // Změna jednotlivých checkboxů
+        mediaCheckboxes.forEach(function(checkbox) {
+            checkbox.addEventListener('change', updateSelectAllCheckbox);
         });
         
         // Zabránění spuštění události kliknutí na label, když uživatel kliká na odkaz

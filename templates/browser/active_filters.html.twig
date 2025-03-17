@@ -1,0 +1,56 @@
+{# templates/browser/active_filters.html.twig #}
+{% if active_filters is defined and active_filters|length > 0 %}
+    <div class="active-filters mb-3">
+        <div class="d-flex align-items-center mb-2">
+            <h6 class="mb-0 me-2">Aktivní filtry:</h6>
+            <a href="{{ path('app_browser_reset_filters', app.request.query.all|merge({'media': app.request.query.all('media')})) }}" 
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-circle"></i> Reset
+            </a>
+        </div>
+        
+        <div class="active-filters-list">
+            {% if active_filters.search is defined %}
+                <span class="badge bg-info text-dark me-2 mb-1">
+                    <i class="bi bi-search"></i> Text: {{ active_filters.search }}
+                </span>
+            {% endif %}
+            
+            {% if active_filters.category is defined %}
+                <span class="badge bg-primary me-2 mb-1">
+                    <i class="bi bi-folder"></i> Kategorie: {{ active_filters.category.name }}
+                </span>
+            {% endif %}
+            
+            {% if active_filters.extension is defined %}
+                <span class="badge bg-secondary me-2 mb-1">
+                    <i class="bi bi-file-earmark"></i> Přípona: {{ active_filters.extension }}
+                </span>
+            {% endif %}
+            
+            {% if active_filters.size is defined %}
+                <span class="badge bg-success me-2 mb-1">
+                    <i class="bi bi-hdd"></i> Velikost: 
+                    {% if active_filters.size.min %}Od {{ active_filters.size.min }}{% endif %}
+                    {% if active_filters.size.max %}Do {{ active_filters.size.max }}{% endif %}
+                </span>
+            {% endif %}
+            
+            {% if active_filters.date is defined %}
+                <span class="badge bg-warning text-dark me-2 mb-1">
+                    <i class="bi bi-calendar"></i> Datum: 
+                    {% if active_filters.date.from %}Od {{ active_filters.date.from }}{% endif %}
+                    {% if active_filters.date.to %}Do {{ active_filters.date.to }}{% endif %}
+                </span>
+            {% endif %}
+            
+            {% if active_filters.meta is defined and active_filters.meta|length > 0 %}
+                {% for meta in active_filters.meta %}
+                    <span class="badge bg-dark me-2 mb-1">
+                        <i class="bi bi-tag"></i> {{ meta.name }}: {{ meta.value }}
+                    </span>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
