@@ -1,10 +1,15 @@
 {# templates/browser/index.html.twig #}
 {% extends 'base.html.twig' %}
 
-{% block title %}Browser - {{ media.description }}{% endblock %}
+{% block title %}
+    {% if selected_media is defined and selected_media|length == 1 %}
+        Browser - {{ selected_media[0].description }}
+    {% else %}
+        Browser - Procházení souborů
+    {% endif %}
+{% endblock %}
 
 {% block stylesheets %}
-    <meta name="media-id" content="{{ media.id }}">
     <style>
         .file-row:hover {
             background-color: rgba(0, 123, 255, 0.1);
@@ -13,6 +18,9 @@
         .file-row.selected {
             background-color: rgba(0, 123, 255, 0.2);
         }
+        .directory-row:hover {
+            background-color: rgba(255, 193, 7, 0.1);
+        }
     </style>
 {% endblock %}
 
@@ -20,68 +28,292 @@
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
-                <i class="bi bi-{{ media.mediaType.icon }}"></i>
-                {{ media.description }} 
-                <small class="text-muted">({{ media.identifier }})</small>
+                {% if selected_media is defined and selected_media|length > 0 %}
+                    {% if selected_media|length == 1 %}
+                        <i class="bi bi-{{ selected_media[0].mediaType.icon|default('hdd') }}"></i>
+                        {{ selected_media[0].description }}
+                        <small class="text-muted">({{ selected_media[0].identifier }})</small>
+                    {% else %}
+                        Procházení {{ selected_media|length }} médií:
+                        {% for media in selected_media %}
+                            <span class="badge bg-primary me-1">{{ media.identifier }}</span>
+                        {% endfor %}
+                    {% endif %}
+                {% else %}
+                    Procházení souborů
+                {% endif %}
             </h5>
             <div>
-                <a href="{{ path('app_browser_media', {'mediaId': media.id}) }}" class="btn btn-sm btn-outline-secondary" title="Obnovit">
-                    <i class="bi bi-arrow-clockwise"></i>
-                </a>
+                {% if app.request.attributes.get('_route') == 'app_browser_browse' %}
+                    <a href="{{ path('app_browser_browse') }}?{{ app.request.query.all|merge({'page': 1})|url_encode }}" class="btn btn-sm btn-outline-secondary" title="Obnovit">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                {% elseif app.request.attributes.get('_route') == 'app_browser_media' %}
+                    <a href="{{ path('app_browser_media', {'id': selected_media[0].id}) }}?{{ app.request.query.all|merge({'page': 1})|url_encode }}" class="btn btn-sm btn-outline-secondary" title="Obnovit">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                {% endif %}
             </div>
         </div>
         <div class="card-body">
-            {# Breadcrumb navigace #}
-            {% include 'browser/breadcrumb.html.twig' with {'media': media, 'directory_path': directory_path|default([])} %}
+            {# Breadcrumb navigace (pouze pro jedno médium s adresáři) #}
+            {% if selected_media is defined and selected_media|length == 1 and directory_path is defined %}
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{{ path('app_browser_media', {'id': selected_media[0].id}) }}">
+                                <i class="bi bi-house-door"></i> Root
+                            </a>
+                        </li>
+                        
+                        {% if directory_path is not empty %}
+                            {% for dir in directory_path %}
+                                {% if loop.last %}
+                                    <li class="breadcrumb-item active" aria-current="page">
+                                        {{ dir.name }}
+                                    </li>
+                                {% else %}
+                                    <li class="breadcrumb-item">
+                                        <a href="{{ path('app_browser_media', {'id': selected_media[0].id, 'directory': dir.id}) }}">
+                                            {{ dir.name }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </ol>
+                </nav>
+            {% endif %}
             
-            {# Formulář filtrů #}
-            {% include 'browser/filter_form.html.twig' with {
-                'filters': filters,
-                'file_categories': file_categories,
-                'meta_types': meta_types,
-                'media': media,
-                'current_directory_id': current_directory_id,
-                'current_route': 'app_browser_media'
-            } %}
-            
-            {# Aktivní filtry #}
-            {% include 'browser/active_filters.html.twig' with {'active_filters': active_filters} %}
-            
+            {# Filtrování a vyhledávání #}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Filtry a vyhledávání</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ app.request.attributes.get('_route') == 'app_browser_media' 
+                                                   ? path('app_browser_media', {'id': selected_media[0].id}) 
+                                                   : path('app_browser_browse') }}" class="row g-3">
+                        {# Zachovat parametry #}
+                        {% if current_directory_id is defined and current_directory_id > 0 %}
+                            <input type="hidden" name="directory" value="{{ current_directory_id }}">
+                        {% endif %}
+                        
+                        {% if app.request.attributes.get('_route') == 'app_browser_browse' %}
+                            {% for media in selected_media %}
+                                <input type="hidden" name="media[]" value="{{ media.id }}">
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {# Vyhledávání #}
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Vyhledávat</label>
+                            <input type="text" class="form-control" id="search" name="search" placeholder="Hledat v názvech..." value="{{ app.request.query.get('search') }}">
+                        </div>
+                        
+                        {# Filtr podle typu #}
+                        <div class="col-md-4">
+                            <label for="filterType" class="form-label">Filtrovat podle</label>
+                            <select class="form-select" id="filterType" name="filterType">
+                                <option value="">Bez filtru</option>
+                                <option value="extension" {% if app.request.query.get('filterType') == 'extension' %}selected{% endif %}>Přípony</option>
+                                <option value="category" {% if app.request.query.get('filterType') == 'category' %}selected{% endif %}>Kategorie</option>
+                            </select>
+                        </div>
+                        
+                        {# Filtr podle hodnoty - dynamicky se mění podle typu filtru #}
+                        <div class="col-md-4">
+                            <label for="filterValue" class="form-label">Hodnota filtru</label>
+                            
+                            {# Hodnota pro filtr přípony #}
+                            <input type="text" class="form-control" id="extensionFilter" name="filterValue" 
+                                   placeholder="Zadejte příponu (např. jpg, pdf)" 
+                                   value="{{ app.request.query.get('filterValue') }}"
+                                   style="{{ app.request.query.get('filterType') == 'extension' ? '' : 'display:none;' }}">
+                            
+                            {# Hodnota pro filtr kategorie #}
+                            <select class="form-select" id="categoryFilter" name="filterValue"
+                                    style="{{ app.request.query.get('filterType') == 'category' ? '' : 'display:none;' }}">
+                                <option value="">-- Vyberte kategorii --</option>
+                                {% if file_categories is defined %}
+                                    {% for category in file_categories %}
+                                        <option value="{{ category.id }}" {% if app.request.query.get('filterValue') == category.id %}selected{% endif %}>
+                                            {{ category.name }}
+                                        </option>
+                                    {% endfor %}
+                                {% endif %}
+                            </select>
+                            
+                            {# Prázdný input pro žádný filtr #}
+                            <input type="text" class="form-control" id="emptyFilter" 
+                                   placeholder="Nejprve vyberte typ filtru" disabled
+                                   style="{{ app.request.query.get('filterType') is empty ? '' : 'display:none;' }}">
+                        </div>
+                        
+                        {# Řazení #}
+                        <div class="col-md-4">
+                            <label for="sortBy" class="form-label">Řadit podle</label>
+                            <select class="form-select" id="sortBy" name="sortBy">
+                                <option value="original_filename" {% if app.request.query.get('sortBy') == 'original_filename' or app.request.query.get('sortBy') is empty %}selected{% endif %}>Názvu</option>
+                                <option value="extension" {% if app.request.query.get('sortBy') == 'extension' %}selected{% endif %}>Přípony</option>
+                                <option value="file_size" {% if app.request.query.get('sortBy') == 'file_size' %}selected{% endif %}>Velikosti</option>
+                                <option value="file_modified_at" {% if app.request.query.get('sortBy') == 'file_modified_at' %}selected{% endif %}>Data modifikace</option>
+                                {% if view_mode is not defined or view_mode == 'flat' %}
+                                    <option value="directory_path" {% if app.request.query.get('sortBy') == 'directory_path' %}selected{% endif %}>Cesty</option>
+                                {% endif %}
+                                {% if app.request.attributes.get('_route') == 'app_browser_browse' %}
+                                    <option value="media_identifier" {% if app.request.query.get('sortBy') == 'media_identifier' %}selected{% endif %}>Média</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        
+                        {# Směr řazení #}
+                        <div class="col-md-4">
+                            <label for="sortDir" class="form-label">Směr řazení</label>
+                            <select class="form-select" id="sortDir" name="sortDir">
+                                <option value="asc" {% if app.request.query.get('sortDir') == 'asc' or app.request.query.get('sortDir') is empty %}selected{% endif %}>Vzestupně (A-Z, 0-9)</option>
+                                <option value="desc" {% if app.request.query.get('sortDir') == 'desc' %}selected{% endif %}>Sestupně (Z-A, 9-0)</option>
+                            </select>
+                        </div>
+                        
+                        {# Velikost stránky #}
+                        <div class="col-md-4">
+                            <label for="pageSize" class="form-label">Položek na stránku</label>
+                            <select class="form-select" id="pageSize" name="pageSize">
+                                <option value="50" {% if app.request.query.get('pageSize') == '50' %}selected{% endif %}>50</option>
+                                <option value="100" {% if app.request.query.get('pageSize') == '100' or app.request.query.get('pageSize') is empty %}selected{% endif %}>100</option>
+                                <option value="200" {% if app.request.query.get('pageSize') == '200' %}selected{% endif %}>200</option>
+                                <option value="500" {% if app.request.query.get('pageSize') == '500' %}selected{% endif %}>500</option>
+                            </select>
+                        </div>
+                        
+                        {# Tlačítka #}
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ app.request.attributes.get('_route') == 'app_browser_media' 
+                                        ? path('app_browser_reset_filters', {'media': [selected_media[0].id]}) 
+                                        : path('app_browser_reset_filters', {'media': app.request.query.all('media')}) }}" 
+                                   class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i> Reset filtrů
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-funnel"></i> Filtrovat
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+
+{# V části s filtry přidejte přepínač režimů zobrazení (mezi filtry a výsledky) #}
+{% if selected_media is defined and selected_media|length == 1 %}
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div class="view-mode-toggle">
+            <div class="btn-group" role="group" aria-label="Přepínač režimu zobrazení">
+                <a href="{{ path('app_browser_media', {
+                    'id': selected_media[0].id,
+                    'view': 'flat',
+                    'page': app.request.query.get('page', 1),
+                    'pageSize': app.request.query.get('pageSize', 100),
+                    'filterType': app.request.query.get('filterType'),
+                    'filterValue': app.request.query.get('filterValue'),
+                    'search': app.request.query.get('search'),
+                    'sortBy': app.request.query.get('sortBy'),
+                    'sortDir': app.request.query.get('sortDir')
+                }) }}" class="btn btn-outline-primary {{ view_mode is not defined or view_mode == 'flat' ? 'active' : '' }}">
+                    <i class="bi bi-list-task"></i> Plochý výpis
+                </a>
+                <a href="{{ path('app_browser_media', {
+                    'id': selected_media[0].id,
+                    'view': 'hierarchical',
+                    'page': app.request.query.get('page', 1),
+                    'pageSize': app.request.query.get('pageSize', 100),
+                    'filterType': app.request.query.get('filterType'),
+                    'filterValue': app.request.query.get('filterValue'),
+                    'search': app.request.query.get('search'),
+                    'sortBy': app.request.query.get('sortBy'),
+                    'sortDir': app.request.query.get('sortDir')
+                }) }}" class="btn btn-outline-primary {{ view_mode is defined and view_mode == 'hierarchical' ? 'active' : '' }}">
+                    <i class="bi bi-folder"></i> Procházení adresářů
+                </a>
+            </div>
+        </div>
+        
+        <div>
+            <span class="badge bg-primary">{{ count|default(0) }} souborů</span>
+            {% if directories is defined and directories|length > 0 %}
+                <span class="badge bg-secondary">{{ directories|length }} složek</span>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
+
             {# Statistika výsledků #}
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <span class="badge bg-primary me-2">{{ total_files }} souborů</span>
-                    <span class="badge bg-secondary">{{ total_directories }} složek</span>
+                    <span class="badge bg-primary me-2">{{ count|default(0) }} souborů</span>
+                    {% if directories is defined and directories|length > 0 %}
+                        <span class="badge bg-secondary">{{ directories|length }} složek</span>
+                    {% endif %}
                 </div>
-                <div class="btn-group btn-group-sm">
-                    <button type="button" class="btn btn-outline-secondary active" id="view-list">
-                        <i class="bi bi-list"></i> Seznam
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" id="view-grid" disabled>
-                        <i class="bi bi-grid"></i> Mřížka
-                    </button>
-                </div>
+                
+                {% if files is defined and files is not empty %}
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary active" id="view-list" title="Zobrazit jako seznam">
+                            <i class="bi bi-list"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="view-grid" title="Zobrazit jako mřížku" disabled>
+                            <i class="bi bi-grid"></i>
+                        </button>
+                    </div>
+                {% endif %}
             </div>
             
-            {# Seznam souborů a složek #}
+            {# Tabulka se soubory a adresáři #}
             <div class="table-responsive">
+                
+
+                {# Upravte hlavičku tabulky, aby obsahovala sloupec pro složku ve flat režimu #}
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th style="width: 40%">Název</th>
-                            <th style="width: 15%">Velikost</th>
-                            <th style="width: 20%">Změněno</th>
-                            <th style="width: 15%">Typ</th>
-                            <th style="width: 10%">Akce</th>
+                            {% if selected_media is defined and selected_media|length > 1 %}
+                                <th style="width: 10%">Médium</th>
+                                <th style="width: 30%">Název</th>
+                            {% else %}
+                                {% if view_mode is not defined or view_mode == 'flat' %}
+                                    <th style="width: 30%">Název</th>
+                                    <th style="width: 20%">Složka</th>
+                                {% else %}
+                                    <th style="width: 50%">Název</th>
+                                {% endif %}
+                            {% endif %}
+                            <th style="width: 10%">Velikost</th>
+                            <th style="width: 15%">Změněno</th>
+                            <th style="width: 10%">Typ</th>
+                            <th style="width: 5%">Akce</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% if directories is not empty %}
+                        {# Adresáře (pouze pro jedno médium v hierarchickém režimu) #}
+                        {% if directories is defined and directories|length > 0 and view_mode is defined and view_mode == 'hierarchical' %}
                             {% for directory in directories %}
                                 <tr class="directory-row">
                                     <td>
                                         <i class="bi bi-folder text-warning"></i>
-                                        <a href="{{ path('app_browser_media', {'mediaId': media.id, 'directory': directory.id}) }}">
+                                        <a href="{{ path('app_browser_media', {
+                                            'id': selected_media[0].id, 
+                                            'view': 'hierarchical',
+                                            'directory': directory.id,
+                                            'pageSize': app.request.query.get('pageSize', 100),
+                                            'filterType': app.request.query.get('filterType'),
+                                            'filterValue': app.request.query.get('filterValue'),
+                                            'sortBy': app.request.query.get('sortBy'),
+                                            'sortDir': app.request.query.get('sortDir'),
+                                            'search': app.request.query.get('search')
+                                        }) }}">
                                             {{ directory.name }}
                                         </a>
                                     </td>
@@ -97,23 +329,44 @@
                             {% endfor %}
                         {% endif %}
                         
-                        {% if files is not empty %}
+                        {# Soubory #}
+                        {% if files is defined and files|length > 0 %}
                             {% for file in files %}
-                                <tr class="file-row" data-file-id="{{ file.id }}">
+                                <tr class="file-row" data-file-id="{{ file.id }}" data-media-id="{{ file.media_id }}">
+                                    {% if selected_media|length > 1 %}
+                                        <td>
+                                            <span class="badge bg-secondary">{{ file.media_identifier }}</span>
+                                        </td>
+                                    {% endif %}
                                     <td>
                                         <i class="bi bi-file-earmark-{{ file.extension|default('text') }} text-secondary"></i>
                                         {{ file.original_filename }}
                                     </td>
+                                    {% if view_mode is not defined or view_mode == 'flat' %}
+                                        <td class="text-muted small">
+                                            {% if file.directory_path is defined %}
+                                                {{ file.directory_path|default('') }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                    {% endif %}
                                     <td>{{ (file.file_size / 1024)|round(2) }} KB</td>
-                                    <td>{{ file.file_modified_at|date('d.m.Y H:i:s') }}</td>
+                                    <td>{{ file.file_modified_at is defined ? file.file_modified_at|date('d.m.Y H:i:s') : '-' }}</td>
                                     <td>{{ file.extension|upper|default('???') }}</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="#" class="btn btn-outline-info file-details" data-file-id="{{ file.id }}" title="Detaily">
+                                            <a href="#" class="btn btn-outline-info file-details" 
+                                            data-file-id="{{ file.id }}" 
+                                            data-media-id="{{ file.media_id }}"
+                                            title="Detaily">
                                                 <i class="bi bi-info-circle"></i>
                                             </a>
                                             {% if file.extension in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'] %}
-                                                <a href="#" class="btn btn-outline-success file-preview" data-file-id="{{ file.id }}" title="Náhled">
+                                                <a href="#" class="btn btn-outline-success file-preview" 
+                                                data-file-id="{{ file.id }}" 
+                                                data-media-id="{{ file.media_id }}"
+                                                title="Náhled">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
                                             {% endif %}
@@ -123,9 +376,9 @@
                             {% endfor %}
                         {% endif %}
 
-                        {% if directories is empty and files is empty %}
+                        {% if (directories is not defined or directories|length == 0) and (files is not defined or files|length == 0) %}
                             <tr>
-                                <td colspan="5" class="text-center py-4">
+                                <td colspan="{{ selected_media|length > 1 ? 6 : ((view_mode is not defined or view_mode == 'flat') ? 6 : 5) }}" class="text-center py-4">
                                     <div class="alert alert-info mb-0">
                                         <i class="bi bi-exclamation-circle me-2"></i>
                                         Nenalezeny žádné soubory ani složky.
@@ -135,10 +388,78 @@
                         {% endif %}
                     </tbody>
                 </table>
+
+
             </div>
             
             {# Stránkování #}
-            {% include 'browser/pagination.html.twig' with {'pagination': pagination} %}
+            {% if total_pages is defined and total_pages > 0 %}
+                <nav aria-label="Stránkování">
+                    <ul class="pagination justify-content-center">
+                        {# První stránka #}
+                        <li class="page-item {{ current_page <= 1 ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ app.request.attributes.get('_route') == 'app_browser_media'
+                                   ? path('app_browser_media', {'id': selected_media[0].id, 'page': 1}|merge(app.request.query.all|filter((v, k) => k != 'page')))
+                                   : path('app_browser_browse', {'page': 1}|merge(app.request.query.all|filter((v, k) => k != 'page')))
+                                }}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        
+                        {# Předchozí stránka #}
+                        <li class="page-item {{ current_page <= 1 ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ app.request.attributes.get('_route') == 'app_browser_media'
+                                   ? path('app_browser_media', {'id': selected_media[0].id, 'page': max(1, current_page - 1)}|merge(app.request.query.all|filter((v, k) => k != 'page')))
+                                   : path('app_browser_browse', {'page': max(1, current_page - 1)}|merge(app.request.query.all|filter((v, k) => k != 'page')))
+                                }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        
+                        {# Stránky #}
+                        {% set start_page = max(1, current_page - 2) %}
+                        {% set end_page = min(total_pages, start_page + 4) %}
+                        {% set start_page = max(1, end_page - 4) %}
+                        
+                        {% for i in start_page..end_page %}
+                            <li class="page-item {{ current_page == i ? 'active' : '' }}">
+                                <a class="page-link" href="{{ app.request.attributes.get('_route') == 'app_browser_media'
+                                       ? path('app_browser_media', {'id': selected_media[0].id, 'page': i}|merge(app.request.query.all|filter((v, k) => k != 'page')))
+                                       : path('app_browser_browse', {'page': i}|merge(app.request.query.all|filter((v, k) => k != 'page')))
+                                    }}">
+                                    {{ i }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                        
+                        {# Další stránka #}
+                        <li class="page-item {{ current_page >= total_pages ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ app.request.attributes.get('_route') == 'app_browser_media'
+                                   ? path('app_browser_media', {'id': selected_media[0].id, 'page': min(total_pages, current_page + 1)}|merge(app.request.query.all|filter((v, k) => k != 'page')))
+                                   : path('app_browser_browse', {'page': min(total_pages, current_page + 1)}|merge(app.request.query.all|filter((v, k) => k != 'page')))
+                                }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        
+                        {# Poslední stránka #}
+                        <li class="page-item {{ current_page >= total_pages ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ app.request.attributes.get('_route') == 'app_browser_media'
+                                   ? path('app_browser_media', {'id': selected_media[0].id, 'page': total_pages}|merge(app.request.query.all|filter((v, k) => k != 'page')))
+                                   : path('app_browser_browse', {'page': total_pages}|merge(app.request.query.all|filter((v, k) => k != 'page')))
+                                }}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="text-center small text-muted mt-2">
+                        Zobrazeno {{ ((current_page - 1) * (app.request.query.get('pageSize', 100)) + 1) }} až 
+                        {{ min(count, current_page * (app.request.query.get('pageSize', 100))) }} 
+                        z celkem {{ count }} položek
+                    </div>
+                </nav>
+            {% endif %}
         </div>
     </div>
     
@@ -176,13 +497,22 @@
                     Vyberte soubor pro zobrazení detailů.
                 </div>
                 
-                <div id="media-info">
-                    <h6>{{ media.description }}</h6>
-                    <p><strong>Identifikátor:</strong> {{ media.identifier }}</p>
-                    <p><strong>Typ:</strong> {{ media.mediaType.name }}</p>
-                    <p><strong>Cesta:</strong> {{ media.path }}</p>
-                    <p><strong>Naposledy skenováno:</strong> {{ media.lastScannedAt ? media.lastScannedAt|date('d.m.Y H:i:s') : 'Nikdy' }}</p>
-                </div>
+                {% if selected_media is defined and selected_media|length > 0 %}
+                    <div class="mt-4">
+                        <h6>Vybraná média:</h6>
+                        <ul class="list-group">
+                            {% for media in selected_media %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-{{ media.mediaType.icon|default('hdd') }} me-2"></i>
+                                        {{ media.description }}
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">{{ media.identifier }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -191,6 +521,28 @@
 {% block javascripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Přepínač typu filtru
+        const filterTypeSelect = document.getElementById('filterType');
+        const extensionFilter = document.getElementById('extensionFilter');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const emptyFilter = document.getElementById('emptyFilter');
+        
+        if (filterTypeSelect) {
+            filterTypeSelect.addEventListener('change', function() {
+                extensionFilter.style.display = 'none';
+                categoryFilter.style.display = 'none';
+                emptyFilter.style.display = 'none';
+                
+                if (this.value === 'extension') {
+                    extensionFilter.style.display = '';
+                } else if (this.value === 'category') {
+                    categoryFilter.style.display = '';
+                } else {
+                    emptyFilter.style.display = '';
+                }
+            });
+        }
+        
         // Přidání události kliknutí na řádky souborů
         document.querySelectorAll('.file-row').forEach(row => {
             row.addEventListener('click', function(e) {
@@ -205,9 +557,10 @@
                 // Označení aktuálního řádku
                 this.classList.add('selected');
                 
-                // Získání ID souboru a zobrazení detailů
+                // Získání ID souboru a média a zobrazení detailů
                 const fileId = this.getAttribute('data-file-id');
-                showFileDetails(fileId);
+                const mediaId = this.getAttribute('data-media-id');
+                showFileDetails(mediaId, fileId);
             });
         });
         
@@ -217,7 +570,8 @@
                 e.preventDefault();
                 
                 const fileId = this.getAttribute('data-file-id');
-                showFileDetails(fileId);
+                const mediaId = this.getAttribute('data-media-id');
+                showFileDetails(mediaId, fileId);
                 
                 // Označení řádku
                 document.querySelectorAll('.file-row').forEach(row => row.classList.remove('selected'));
@@ -231,14 +585,14 @@
                 e.preventDefault();
                 
                 const fileId = this.getAttribute('data-file-id');
-                const mediaId = document.querySelector('meta[name="media-id"]').getAttribute('content');
+                const mediaId = this.getAttribute('data-media-id');
                 
                 // Zobrazit modal pro náhled
                 const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
                 modal.show();
                 
                 // Načíst detaily souboru
-                fetch(`/api/file/${mediaId}/${fileId}`)
+                fetch(`/browser/api/file/${mediaId}/${fileId}`)
                     .then(response => response.json())
                     .then(data => {
                         const previewTitle = document.getElementById('imagePreviewTitle');
@@ -259,13 +613,17 @@
                     })
                     .catch(error => {
                         console.error('Error loading file details:', error);
+                        previewBody.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                Chyba při načítání detailů souboru.
+                            </div>`;
                     });
             });
         });
     });
     
-    function showFileDetails(fileId) {
-        const mediaId = document.querySelector('meta[name="media-id"]').getAttribute('content');
+    function showFileDetails(mediaId, fileId) {
         const detailsContainer = document.getElementById('file-details-container');
         
         // Zobrazení načítacího indikátoru
@@ -279,7 +637,7 @@
         `;
         
         // Načtení detailů souboru
-        fetch(`/api/file/${mediaId}/${fileId}`)
+        fetch(`/browser/api/file/${mediaId}/${fileId}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Nepodařilo se načíst detaily souboru');
@@ -299,7 +657,7 @@
                     data.metadata.forEach(meta => {
                         metadataHtml += `
                             <tr>
-                                <th>${meta.label}:</th>
+                                <th>${meta.label || meta.name}:</th>
                                 <td>${meta.value}</td>
                             </tr>
                         `;
@@ -356,7 +714,9 @@
                         
                         ${data.exists && ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(data.extension) ? `
                             <div class="mt-3 d-grid">
-                                <button type="button" class="btn btn-outline-primary file-preview" data-file-id="${data.id}">
+                                <button type="button" class="btn btn-outline-primary file-preview" 
+                                   data-file-id="${data.id}" 
+                                   data-media-id="${mediaId}">
                                     <i class="bi bi-eye"></i> Zobrazit náhled
                                 </button>
                             </div>
@@ -369,6 +729,7 @@
                 if (previewBtn) {
                     previewBtn.addEventListener('click', function() {
                         const fileId = this.getAttribute('data-file-id');
+                        const mediaId = this.getAttribute('data-media-id');
                         
                         // Zobrazit modal pro náhled
                         const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
