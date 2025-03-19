@@ -1,0 +1,292 @@
+{# templates/dashboard/index.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Dashboard - Digital Media Collector{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Dashboard</h5>
+        <div>
+            <a href="{{ path('app_media_list') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-collection"></i> Správa médií
+            </a>
+            <a href="{{ path('app_browser') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-folder2-open"></i> Procházet soubory
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {# Základní statistiky #}
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 border-primary">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-muted">Médií celkem</h6>
+                        <div class="mt-3 mb-3">
+                            <i class="bi bi-hdd-stack text-primary" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h3 class="card-text">{{ basic_stats.media_count }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 border-success">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-muted">Celková velikost</h6>
+                        <div class="mt-3 mb-3">
+                            <i class="bi bi-hdd text-success" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h3 class="card-text">{{ basic_stats.formatted_total_size }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 border-info">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-muted">Souborů</h6>
+                        <div class="mt-3 mb-3">
+                            <i class="bi bi-file-earmark text-info" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h3 class="card-text">{{ basic_stats.total_files|number_format(0, ',', ' ') }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 border-warning">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-muted">Adresářů</h6>
+                        <div class="mt-3 mb-3">
+                            <i class="bi bi-folder text-warning" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h3 class="card-text">{{ basic_stats.total_directories|number_format(0, ',', ' ') }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            {# Top 10 přípon podle počtu souborů #}
+            <div class="col-lg-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="mb-0">Top 10 přípon podle počtu souborů</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Přípona</th>
+                                    <th>Kategorie</th>
+                                    <th class="text-end">Počet souborů</th>
+                                    <th class="text-end">Velikost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ext in top_extensions_by_count %}
+                                    <tr>
+                                        <td>
+                                            <strong>.{{ ext.extension }}</strong>
+                                        </td>
+                                        <td>
+                                            <i class="bi bi-{{ ext.category_icon|default('file') }} me-1"></i>
+                                            {{ ext.category_name }}
+                                        </td>
+                                        <td class="text-end">{{ ext.total_count|number_format(0, ',', ' ') }}</td>
+                                        <td class="text-end">{{ ext.formatted_size }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {# Top 10 přípon podle velikosti #}
+            <div class="col-lg-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="mb-0">Top 10 přípon podle velikosti</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Přípona</th>
+                                    <th>Kategorie</th>
+                                    <th class="text-end">Velikost</th>
+                                    <th class="text-end">Počet souborů</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ext in top_extensions_by_size %}
+                                    <tr>
+                                        <td>
+                                            <strong>.{{ ext.extension }}</strong>
+                                        </td>
+                                        <td>
+                                            <i class="bi bi-{{ ext.category_icon|default('file') }} me-1"></i>
+                                            {{ ext.category_name }}
+                                        </td>
+                                        <td class="text-end">{{ ext.formatted_size }}</td>
+                                        <td class="text-end">{{ ext.total_count|number_format(0, ',', ' ') }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            {# Statistika podle typů médií #}
+            <div class="col-lg-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="mb-0">Podle typů médií</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Typ média</th>
+                                    <th class="text-end">Počet médií</th>
+                                    <th class="text-end">Souborů</th>
+                                    <th class="text-end">Velikost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type in media_type_stats %}
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-{{ type.icon|default('hdd') }} me-1"></i>
+                                            {{ type.name }}
+                                        </td>
+                                        <td class="text-end">{{ type.media_count }}</td>
+                                        <td class="text-end">{{ type.files_count|number_format(0, ',', ' ') }}</td>
+                                        <td class="text-end">{{ type.formatted_size }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {# Statistika podle kategorií souborů #}
+            <div class="col-lg-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="mb-0">Podle kategorií souborů</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Kategorie</th>
+                                    <th class="text-end">Počet souborů</th>
+                                    <th class="text-end">Velikost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in category_stats %}
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-{{ category.icon|default('file') }} me-1"></i>
+                                            {{ category.name }}
+                                        </td>
+                                        <td class="text-end">{{ category.total_count|number_format(0, ',', ' ') }}</td>
+                                        <td class="text-end">{{ category.formatted_size }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Poslední skenovaná média #}
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Poslední skenovaná média</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Médium</th>
+                                    <th>Typ</th>
+                                    <th class="text-end">Souborů</th>
+                                    <th class="text-end">Adresářů</th>
+                                    <th class="text-end">Velikost</th>
+                                    <th>Poslední sken</th>
+                                    <th>Akce</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for media in recently_scanned_media %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ media.description }}</strong>
+                                            <small class="text-muted d-block">{{ media.identifier }}</small>
+                                        </td>
+                                        <td>
+                                            <i class="bi bi-{{ media.type_icon|default('hdd') }} me-1"></i>
+                                            {{ media.type_name }}
+                                        </td>
+                                        <td class="text-end">{{ media.files_count|number_format(0, ',', ' ') }}</td>
+                                        <td class="text-end">{{ media.directories_count|number_format(0, ',', ' ') }}</td>
+                                        <td class="text-end">{{ media.formatted_size }}</td>
+                                        <td>{{ media.scanned_date }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ path('app_browser_select_media', {'id': media.id}) }}" class="btn btn-outline-primary" title="Procházet">
+                                                    <i class="bi bi-folder2-open"></i>
+                                                </a>
+                                                <a href="{{ path('app_media_edit', {'id': media.id}) }}" class="btn btn-outline-secondary" title="Upravit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block sidebar %}
+<div class="card h-100">
+    <div class="card-header">
+        <h5 class="mb-0">Rychlé akce</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-grid gap-2">
+            <a href="{{ path('app_media_new') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i> Přidat médium
+            </a>
+            <a href="{{ path('app_browser') }}" class="btn btn-outline-primary">
+                <i class="bi bi-folder2-open me-1"></i> Procházet soubory
+            </a>
+            <a href="{{ path('app_settings_file_categories') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-tags me-1"></i> Kategorie souborů
+            </a>
+            <a href="{{ path('app_settings_media_types') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-hdd-stack me-1"></i> Typy médií
+            </a>
+            <a href="{{ path('app_settings_meta_types') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-database me-1"></i> Metadata
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

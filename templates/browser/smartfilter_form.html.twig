@@ -6,50 +6,58 @@
     <div class="card-body">
         {{ form_start(smart_filter_form, {'action': path('app_media_filter')}) }}
             <div class="row g-3">
-                {# Výběr médií - nová sekce #}
-                <div class="col-md-12 mb-3">
-                    {{ form_label(smart_filter_form.selected_media_ids) }}
-                    {{ form_widget(smart_filter_form.selected_media_ids) }}
-                    <div class="form-text">Vyberte média, která chcete procházet (nebo použijte checkboxy v levém menu)</div>
-                </div>
-                
-                {# Vyhledávání #}
-                <div class="col-md-4">
+                {# Vyhledávání - první položka #}
+                <div class="col-md-12">
                     {{ form_label(smart_filter_form.filter_search) }}
                     {{ form_widget(smart_filter_form.filter_search) }}
                     {{ form_help(smart_filter_form.filter_search) }}
                 </div>
                 
-                {# Filtr dle přípony #}
-                <div class="col-md-4">
-                    {{ form_label(smart_filter_form.filter_extension) }}
-                    {{ form_widget(smart_filter_form.filter_extension) }}
-                    {{ form_help(smart_filter_form.filter_extension) }}
-                </div>
-                
-                {# Filtr dle kategorie #}
-                <div class="col-md-4">
+                {# Filtr dle kategorie - druhá položka #}
+                <div class="col-md-12">
                     {{ form_label(smart_filter_form.filter_category) }}
                     {{ form_widget(smart_filter_form.filter_category) }}
                     {{ form_help(smart_filter_form.filter_category) }}
                 </div>
                 
-                {# Řazení #}
-                <div class="col-md-4">
-                    {{ form_label(smart_filter_form.sort_by) }}
-                    {{ form_widget(smart_filter_form.sort_by) }}
+                {# Tlačítko pro zobrazení/skrytí dalších filtrů #}
+                <div class="col-md-12">
+                    <button type="button" class="btn btn-sm btn-outline-secondary w-100" id="toggleAdvancedFilters">
+                        <span class="show-more"><i class="bi bi-chevron-down"></i> Zobrazit pokročilé filtry</span>
+                        <span class="show-less d-none"><i class="bi bi-chevron-up"></i> Skrýt pokročilé filtry</span>
+                    </button>
                 </div>
                 
-                {# Směr řazení #}
-                <div class="col-md-4">
-                    {{ form_label(smart_filter_form.sort_dir) }}
-                    {{ form_widget(smart_filter_form.sort_dir) }}
-                </div>
-                
-                {# Položek na stránku #}
-                <div class="col-md-4">
-                    {{ form_label(smart_filter_form.page_size) }}
-                    {{ form_widget(smart_filter_form.page_size) }}
+                {# Rozbalovací část s pokročilými filtry #}
+                <div class="col-12 advanced-filters d-none">
+                    <div class="card card-body bg-light">
+                        <div class="row g-3">
+                            {# Filtr dle přípony #}
+                            <div class="col-md-12">
+                                {{ form_label(smart_filter_form.filter_extension) }}
+                                {{ form_widget(smart_filter_form.filter_extension) }}
+                                {{ form_help(smart_filter_form.filter_extension) }}
+                            </div>
+                            
+                            {# Řazení #}
+                            <div class="col-md-4">
+                                {{ form_label(smart_filter_form.sort_by) }}
+                                {{ form_widget(smart_filter_form.sort_by) }}
+                            </div>
+                            
+                            {# Směr řazení #}
+                            <div class="col-md-4">
+                                {{ form_label(smart_filter_form.sort_dir) }}
+                                {{ form_widget(smart_filter_form.sort_dir) }}
+                            </div>
+                            
+                            {# Položek na stránku #}
+                            <div class="col-md-4">
+                                {{ form_label(smart_filter_form.page_size) }}
+                                {{ form_widget(smart_filter_form.page_size) }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 {# Aktuální stránka - skrytá #}
@@ -58,16 +66,38 @@
                 {# Tlačítka #}
                 <div class="col-12">
                     <div class="d-flex justify-content-between">
-                        <a href="{{ path('app_media_filter_reset_filters') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle"></i> Reset filtrů
+                        <a href="{{ path('app_media_filter_reset_filters') }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Reset
                         </a>
-                        <button type="submit" class="btn btn-primary" name="filter_submit" value="1">
+                        <button type="submit" class="btn btn-sm btn-primary" name="filter_submit" value="1">
                             <i class="bi bi-funnel"></i> Filtrovat
                         </button>
                     </div>
+                </div>
+                
+                {# Výběr médií - poslední položka pod rozbalením #}
+                <div class="col-md-12 mt-3">
+                    {{ form_label(smart_filter_form.selected_media_ids) }}
+                    {{ form_widget(smart_filter_form.selected_media_ids) }}
+                    <div class="form-text">Vyberte média, která chcete procházet</div>
                 </div>
             </div>
         
         {{ form_end(smart_filter_form) }}
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleButton = document.getElementById('toggleAdvancedFilters');
+    const advancedFilters = document.querySelector('.advanced-filters');
+    const showMoreText = document.querySelector('.show-more');
+    const showLessText = document.querySelector('.show-less');
+    
+    toggleButton.addEventListener('click', function() {
+        advancedFilters.classList.toggle('d-none');
+        showMoreText.classList.toggle('d-none');
+        showLessText.classList.toggle('d-none');
+    });
+});
+</script>

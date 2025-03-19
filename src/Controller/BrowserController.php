@@ -69,6 +69,26 @@ class BrowserController extends BaseController
         ]);
     }
 
+
+    #[Route('/select-media/{id}', name: '_select_media')]
+    public function selectMedia(int $id): Response
+    {
+        // Načíst médium, abys ověřil, že existuje
+        $media = $this->entityManager->getRepository(Media::class)->find($id);
+        
+        if (!$media) {
+            throw $this->createNotFoundException('Médium nenalezeno');
+        }
+        
+        $defaultFilterData = $this->sessionService->getDefaultFilterData();
+        $defaultFilterData['selected_media_ids'] = [$id]; // Přepíšeme pouze ID média
+        $this->sessionService->saveFilterData($defaultFilterData);
+        
+        // Přesměrovat na browser, který už umí pracovat s filtrem ze session
+        return $this->redirectToRoute('app_browser');
+    }
+
+
     /**
      * Renderování prázdného pohledu
      */
