@@ -1,0 +1,50 @@
+{# templates/browser/media_statistics.html.twig #}
+{% if media_stats is defined and media_stats|length > 0 %}
+    <div class="card mb-3">
+        <div class="card-header">
+            <h6 class="mb-0">Statistiky vyhledávání</h6>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="badge bg-primary p-2">
+                    <i class="bi bi-filter"></i> Zobrazeno {{ count|default(0) }} z celkem {{ total_count|default(0) }} souborů
+                </span>
+                
+                {% if current_page is defined and total_pages is defined and total_pages > 0 %}
+                    <span class="text-muted small">
+                        Stránka {{ current_page }} z {{ total_pages }}
+                    </span>
+                {% endif %}
+            </div>
+            
+            {% if media_stats|length > 1 %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead>
+                            <tr>
+                                <th>Médium</th>
+                                <th>Identifikátor</th>
+                                <th>Nalezené soubory</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in media_stats %}
+                                <tr>
+                                    <td>{{ stat.description }}</td>
+                                    <td><code>{{ stat.media_identifier }}</code></td>
+                                    <td class="text-end">
+                                        {% if stat.filtered_count > 0 %}
+                                            <span class="badge bg-success">{{ stat.filtered_count }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">0</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}

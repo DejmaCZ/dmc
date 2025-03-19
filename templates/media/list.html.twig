@@ -51,7 +51,7 @@
                                         {# V templates/media/list.html.twig upravte část s akcemi #}
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <a href="{{ path('app_browser_media', {'mediaId': media.id}) }}" class="btn btn-outline-primary" title="Procházet">
+                                                <a href="{{ path('app_browser', {'mediaId': media.id}) }}" class="btn btn-outline-primary" title="Procházet">
                                                     <i class="bi bi-folder2-open"></i>
                                                 </a>
                                                 <a href="{{ path('app_media_edit', {'id': media.id}) }}" class="btn btn-outline-secondary" title="Upravit">

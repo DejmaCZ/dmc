@@ -85,7 +85,14 @@
                 </nav>
             {% endif %}
             
-            {{ include('browser/filter_form.html.twig') }}
+            {#{ include('browser/smartfilter_form.html.twig') }}
+
+            {# Statistiky médií #}
+            {{ include('browser/media_statistics.html.twig') }}
+
+            {# Statistika výsledků #}
+            
+
 
 
 {# V části s filtry přidejte přepínač režimů zobrazení (mezi filtry a výsledky) #}
@@ -93,32 +100,10 @@
     <div class="mb-3 d-flex justify-content-between align-items-center">
         <div class="view-mode-toggle">
             <div class="btn-group" role="group" aria-label="Přepínač režimu zobrazení">
-                <a href="{{ path('app_browser_media', {
-                    'id': selected_media[0].id,
-                    'view': 'flat',
-                    'page': app.request.query.get('page', 1),
-                    'pageSize': app.request.query.get('pageSize', 100),
-                    'filterType': app.request.query.get('filterType'),
-                    'filterValue': app.request.query.get('filterValue'),
-                    'search': app.request.query.get('search'),
-                    'sortBy': app.request.query.get('sortBy'),
-                    'sortDir': app.request.query.get('sortDir')
-                }) }}" class="btn btn-outline-primary {{ view_mode is not defined or view_mode == 'flat' ? 'active' : '' }}">
+               
                     <i class="bi bi-list-task"></i> Plochý výpis
-                </a>
-                <a href="{{ path('app_browser_media', {
-                    'id': selected_media[0].id,
-                    'view': 'hierarchical',
-                    'page': app.request.query.get('page', 1),
-                    'pageSize': app.request.query.get('pageSize', 100),
-                    'filterType': app.request.query.get('filterType'),
-                    'filterValue': app.request.query.get('filterValue'),
-                    'search': app.request.query.get('search'),
-                    'sortBy': app.request.query.get('sortBy'),
-                    'sortDir': app.request.query.get('sortDir')
-                }) }}" class="btn btn-outline-primary {{ view_mode is defined and view_mode == 'hierarchical' ? 'active' : '' }}">
                     <i class="bi bi-folder"></i> Procházení adresářů
-                </a>
+               
             </div>
         </div>
         
@@ -215,11 +200,7 @@
                         {% if files is defined and files|length > 0 %}
                             {% for file in files %}
                                 <tr class="file-row" data-file-id="{{ file.id }}" data-media-id="{{ file.media_id }}">
-                                    {% if selected_media|length > 1 %}
-                                        <td>
-                                            <span class="badge bg-secondary">{{ file.media_identifier }}</span>
-                                        </td>
-                                    {% endif %}
+       
                                     <td>
                                         <i class="bi bi-file-earmark-{{ file.extension|default('text') }} text-secondary"></i>
                                         {{ file.original_filename }}
@@ -260,12 +241,7 @@
 
                         {% if (directories is not defined or directories|length == 0) and (files is not defined or files|length == 0) %}
                             <tr>
-                                <td colspan="{{ selected_media|length > 1 ? 6 : ((view_mode is not defined or view_mode == 'flat') ? 6 : 5) }}" class="text-center py-4">
-                                    <div class="alert alert-info mb-0">
-                                        <i class="bi bi-exclamation-circle me-2"></i>
-                                        Nenalezeny žádné soubory ani složky.
-                                    </div>
-                                </td>
+                            
                             </tr>
                         {% endif %}
                     </tbody>
@@ -274,74 +250,7 @@
 
             </div>
             
-            {# Stránkování #}
-            {% if total_pages is defined and total_pages > 0 %}
-                <nav aria-label="Stránkování">
-                    <ul class="pagination justify-content-center">
-                        {# První stránka #}
-                        <li class="page-item {{ current_page <= 1 ? 'disabled' : '' }}">
-                            <a class="page-link" href="{{ app.request.attributes.get('_route') == 'app_browser_media'
-                                   ? path('app_browser_media', {'id': selected_media[0].id, 'page': 1}|merge(app.request.query.all|filter((v, k) => k != 'page')))
-                                   : path('app_browser_browse', {'page': 1}|merge(app.request.query.all|filter((v, k) => k != 'page')))
-                                }}">
-                                <i class="bi bi-chevron-double-left"></i>
-                            </a>
-                        </li>
-                        
-                        {# Předchozí stránka #}
-                        <li class="page-item {{ current_page <= 1 ? 'disabled' : '' }}">
-                            <a class="page-link" href="{{ app.request.attributes.get('_route') == 'app_browser_media'
-                                   ? path('app_browser_media', {'id': selected_media[0].id, 'page': max(1, current_page - 1)}|merge(app.request.query.all|filter((v, k) => k != 'page')))
-                                   : path('app_browser_browse', {'page': max(1, current_page - 1)}|merge(app.request.query.all|filter((v, k) => k != 'page')))
-                                }}">
-                                <i class="bi bi-chevron-left"></i>
-                            </a>
-                        </li>
-                        
-                        {# Stránky #}
-                        {% set start_page = max(1, current_page - 2) %}
-                        {% set end_page = min(total_pages, start_page + 4) %}
-                        {% set start_page = max(1, end_page - 4) %}
-                        
-                        {% for i in start_page..end_page %}
-                            <li class="page-item {{ current_page == i ? 'active' : '' }}">
-                                <a class="page-link" href="{{ app.request.attributes.get('_route') == 'app_browser_media'
-                                       ? path('app_browser_media', {'id': selected_media[0].id, 'page': i}|merge(app.request.query.all|filter((v, k) => k != 'page')))
-                                       : path('app_browser_browse', {'page': i}|merge(app.request.query.all|filter((v, k) => k != 'page')))
-                                    }}">
-                                    {{ i }}
-                                </a>
-                            </li>
-                        {% endfor %}
-                        
-                        {# Další stránka #}
-                        <li class="page-item {{ current_page >= total_pages ? 'disabled' : '' }}">
-                            <a class="page-link" href="{{ app.request.attributes.get('_route') == 'app_browser_media'
-                                   ? path('app_browser_media', {'id': selected_media[0].id, 'page': min(total_pages, current_page + 1)}|merge(app.request.query.all|filter((v, k) => k != 'page')))
-                                   : path('app_browser_browse', {'page': min(total_pages, current_page + 1)}|merge(app.request.query.all|filter((v, k) => k != 'page')))
-                                }}">
-                                <i class="bi bi-chevron-right"></i>
-                            </a>
-                        </li>
-                        
-                        {# Poslední stránka #}
-                        <li class="page-item {{ current_page >= total_pages ? 'disabled' : '' }}">
-                            <a class="page-link" href="{{ app.request.attributes.get('_route') == 'app_browser_media'
-                                   ? path('app_browser_media', {'id': selected_media[0].id, 'page': total_pages}|merge(app.request.query.all|filter((v, k) => k != 'page')))
-                                   : path('app_browser_browse', {'page': total_pages}|merge(app.request.query.all|filter((v, k) => k != 'page')))
-                                }}">
-                                <i class="bi bi-chevron-double-right"></i>
-                            </a>
-                        </li>
-                    </ul>
-                    
-                    <div class="text-center small text-muted mt-2">
-                        Zobrazeno {{ ((current_page - 1) * (app.request.query.get('pageSize', 100)) + 1) }} až 
-                        {{ min(count, current_page * (app.request.query.get('pageSize', 100))) }} 
-                        z celkem {{ count }} položek
-                    </div>
-                </nav>
-            {% endif %}
+            
         </div>
     </div>
     

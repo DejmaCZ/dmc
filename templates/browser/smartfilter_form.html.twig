@@ -1,0 +1,73 @@
+{# templates/browser/smartfilter_form.html.twig #}
+<div class="card mb-3">
+    <div class="card-header">
+        <h6 class="mb-0">Filtry a vyhledávání</h6>
+    </div>
+    <div class="card-body">
+        {{ form_start(smart_filter_form, {'action': path('app_media_filter')}) }}
+            <div class="row g-3">
+                {# Výběr médií - nová sekce #}
+                <div class="col-md-12 mb-3">
+                    {{ form_label(smart_filter_form.selected_media_ids) }}
+                    {{ form_widget(smart_filter_form.selected_media_ids) }}
+                    <div class="form-text">Vyberte média, která chcete procházet (nebo použijte checkboxy v levém menu)</div>
+                </div>
+                
+                {# Vyhledávání #}
+                <div class="col-md-4">
+                    {{ form_label(smart_filter_form.filter_search) }}
+                    {{ form_widget(smart_filter_form.filter_search) }}
+                    {{ form_help(smart_filter_form.filter_search) }}
+                </div>
+                
+                {# Filtr dle přípony #}
+                <div class="col-md-4">
+                    {{ form_label(smart_filter_form.filter_extension) }}
+                    {{ form_widget(smart_filter_form.filter_extension) }}
+                    {{ form_help(smart_filter_form.filter_extension) }}
+                </div>
+                
+                {# Filtr dle kategorie #}
+                <div class="col-md-4">
+                    {{ form_label(smart_filter_form.filter_category) }}
+                    {{ form_widget(smart_filter_form.filter_category) }}
+                    {{ form_help(smart_filter_form.filter_category) }}
+                </div>
+                
+                {# Řazení #}
+                <div class="col-md-4">
+                    {{ form_label(smart_filter_form.sort_by) }}
+                    {{ form_widget(smart_filter_form.sort_by) }}
+                </div>
+                
+                {# Směr řazení #}
+                <div class="col-md-4">
+                    {{ form_label(smart_filter_form.sort_dir) }}
+                    {{ form_widget(smart_filter_form.sort_dir) }}
+                </div>
+                
+                {# Položek na stránku #}
+                <div class="col-md-4">
+                    {{ form_label(smart_filter_form.page_size) }}
+                    {{ form_widget(smart_filter_form.page_size) }}
+                </div>
+                
+                {# Aktuální stránka - skrytá #}
+                {{ form_widget(smart_filter_form.page) }}
+                
+                {# Tlačítka #}
+                <div class="col-12">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ path('app_media_filter_reset_filters') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Reset filtrů
+                        </a>
+                        <button type="submit" class="btn btn-primary" name="filter_submit" value="1">
+                            <i class="bi bi-funnel"></i> Filtrovat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        
+        {{ form_end(smart_filter_form) }}
+    </div>
+</div>
